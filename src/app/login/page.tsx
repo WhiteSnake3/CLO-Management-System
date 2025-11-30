@@ -40,7 +40,7 @@ export default function LoginPage() {
             placeholder="you@university.edu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 border border-slate-200 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full p-3 border border-slate-200 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-black"
             required
           />
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
             placeholder="Your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 border border-slate-200 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full p-3 border border-slate-200 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-black"
             required
           />
 

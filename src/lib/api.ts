@@ -89,3 +89,26 @@ export const performances = {
   update: (id: string, data: any) => apiCall(`/performances/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (id: string) => apiCall(`/performances/${id}`, { method: "DELETE" }),
 };
+// Transaction Logs endpoints
+export const transactionLogs = {
+  getAll: () => apiCall("/transaction-logs"),
+  create: (data: any) => apiCall("/transaction-logs", { method: "POST", body: JSON.stringify(data) }),
+};
+
+// Analytics endpoints
+export const analytics = {
+  getCLOAchievement: (courseId?: string) =>
+    apiCall(`/analytics${courseId ? `?courseId=${courseId}` : ""}`),
+};
+
+// Utility: Decode JWT to get user info
+export const getUserFromToken = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload;
+  } catch {
+    return null;
+  }
+};

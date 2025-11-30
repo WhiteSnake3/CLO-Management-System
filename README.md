@@ -6,15 +6,14 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the frontend.
+Open [http://localhost:5000](http://localhost:5000) to run the backend.
+
+admin credentials: admin2@system.com, pass: gusiuppy
+instructor credentials: maqbool.khan@aubh.edu.bh, pass: test1234
+student credentials: aisha.m@example.edu, pass: m4bolitm
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
