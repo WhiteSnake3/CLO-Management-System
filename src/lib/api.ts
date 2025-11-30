@@ -1,0 +1,91 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+export const apiCall = async (
+  endpoint: string,
+  options: RequestInit = {}
+) => {
+const url = `${API_URL}${endpoint}`;
+  // use the Headers API to avoid indexing a union type and to work with all HeadersInit shapes
+  const headers = new Headers(options.headers ?? {});
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const token = localStorage.getItem("token");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+// Auth endpoints
+export const auth = {
+  register: (data: { email: string; name: string; password: string; role: string }) =>
+    apiCall("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+  login: (data: { email: string; password: string }) =>
+    apiCall("/auth/login", { method: "POST", body: JSON.stringify(data) }),
+};
+
+// Students endpoints
+export const students = {
+  getAll: () => apiCall("/students"),
+  getById: (id: string) => apiCall(`/students/${id}`),
+  create: (data: any) => apiCall("/students", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/students/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/students/${id}`, { method: "DELETE" }),
+};
+
+// Courses endpoints
+export const courses = {
+  getAll: () => apiCall("/courses"),
+  getById: (id: string) => apiCall(`/courses/${id}`),
+  create: (data: any) => apiCall("/courses", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/courses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/courses/${id}`, { method: "DELETE" }),
+};
+
+// Instructors endpoints
+export const instructors = {
+  getAll: () => apiCall("/instructors"),
+  getById: (id: string) => apiCall(`/instructors/${id}`),
+  create: (data: any) => apiCall("/instructors", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/instructors/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/instructors/${id}`, { method: "DELETE" }),
+};
+
+// Assessments endpoints
+export const assessments = {
+  getAll: () => apiCall("/assessments"),
+  getById: (id: string) => apiCall(`/assessments/${id}`),
+  create: (data: any) => apiCall("/assessments", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/assessments/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/assessments/${id}`, { method: "DELETE" }),
+};
+
+// Enrollments endpoints
+export const enrollments = {
+  getAll: () => apiCall("/enrollments"),
+  getById: (id: string) => apiCall(`/enrollments/${id}`),
+  create: (data: any) => apiCall("/enrollments", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/enrollments/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/enrollments/${id}`, { method: "DELETE" }),
+};
+
+// Performances endpoints
+export const performances = {
+  getAll: () => apiCall("/performances"),
+  getById: (id: string) => apiCall(`/performances/${id}`),
+  create: (data: any) => apiCall("/performances", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/performances/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/performances/${id}`, { method: "DELETE" }),
+};
