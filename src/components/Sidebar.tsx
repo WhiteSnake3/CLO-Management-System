@@ -2,11 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Sidebar() {
   const router = useRouter();
   const [active, setActive] = useState("home");
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setUserRole(payload.role);
+      } catch {
+        setUserRole(null);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -21,6 +34,7 @@ export default function Sidebar() {
     { id: "reports", label: "Reports", icon: "📋", href: "#" },
     { id: "inbox", label: "Inbox", icon: "📬", href: "#" },
     { id: "settings", label: "Settings", icon: "⚙️", href: "#" },
+    ...(userRole === "admin" ? [{ id: "admin", label: "Admin Panel", icon: "🔐", href: "/dashboard/admin" }] : []),
   ];
 
   return (

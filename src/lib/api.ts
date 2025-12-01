@@ -36,6 +36,15 @@ export const auth = {
     apiCall("/auth/login", { method: "POST", body: JSON.stringify(data) }),
 };
 
+// Users endpoints
+export const users = {
+  getAll: () => apiCall("/auth"),
+  getById: (id: string) => apiCall(`/auth/${id}`),
+  create: (data: any) => apiCall("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: any) => apiCall(`/auth/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  delete: (id: string) => apiCall(`/auth/${id}`, { method: "DELETE" }),
+};
+
 // Students endpoints
 export const students = {
   getAll: () => apiCall("/students"),

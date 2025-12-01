@@ -67,7 +67,7 @@ export default function DashboardPage() {
         {/* Tabs */}
         <div className="border-b border-slate-200 bg-white">
           <div className="max-w-7xl mx-auto px-6 flex gap-8">
-            {["CLO Achievement", "Courses", "Assessments", "Students"].map((tab, i) => (
+            {["CLO Achievement", "Courses", "Assessments", "Students", ...(user?.role === "admin" ? ["Admin Panel"] : [])].map((tab, i) => (
               <button
                 key={tab}
                 className={`py-4 font-medium text-sm border-b-2 transition ${
