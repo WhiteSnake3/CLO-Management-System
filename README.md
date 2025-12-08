@@ -158,7 +158,29 @@ CLOMS Project/
 
 ## Database Backup & Restore
 
+**Via Web Interface (Admin Panel):**
+1. Login as an admin user
+2. Navigate to Admin Panel → Backup tab
+3. Click "🗄️ Create New Backup" to create a timestamped backup
+4. View all available backups in the list
+5. Click "♻️ Restore" on any backup to restore the database
+6. Confirm the restoration (this will overwrite current data)
+
+**Via Command Line (PowerShell):**
+
 **Backup:**
+```powershell
+cd backend/src/backups
+.\backup.ps1
+```
+
+**Restore:**
+```powershell
+cd backend/src/backups
+.\restore.ps1
+```
+
+**Via Bash (Linux/Mac):**
 ```bash
 cd backend/src/backups
 ./backup.sh

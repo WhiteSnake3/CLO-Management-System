@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import { students, instructors, courses, users, assessments, enrollments, transactionLogs, getUserFromToken } from "@/lib/api";
+import { students, instructors, courses, users, assessments, enrollments, backup, transactionLogs, getUserFromToken } from "@/lib/api";
 
 function AdminPanelContent() {
   const router = useRouter();
@@ -18,6 +18,11 @@ function AdminPanelContent() {
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [assessmentsList, setAssessmentsList] = useState<any[]>([]);
   const [enrollmentsList, setEnrollmentsList] = useState<any[]>([]);
+
+  // Backup states
+  const [backupsList, setBackupsList] = useState<any[]>([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMessage, setBackupMessage] = useState("");
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -230,6 +235,53 @@ function AdminPanelContent() {
     }
   };
 
+  // Backup functions
+  const fetchBackups = async () => {
+    try {
+      const response = await backup.listBackups();
+      setBackupsList(response.backups || []);
+    } catch (err) {
+      console.error("Failed to fetch backups", err);
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    setBackupLoading(true);
+    setBackupMessage("");
+    try {
+      const response = await backup.createBackup();
+      setBackupMessage(`✓ Backup created: ${response.backupDir}`);
+      await fetchBackups();
+    } catch (err: any) {
+      setBackupMessage(`✗ Backup failed: ${err.message}`);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestoreBackup = async (backupName: string) => {
+    if (!confirm(`Are you sure you want to restore from "${backupName}"? This will overwrite all current data.`)) {
+      return;
+    }
+    setBackupLoading(true);
+    setBackupMessage("");
+    try {
+      await backup.restore(backupName);
+      setBackupMessage(`✓ Database restored from: ${backupName}`);
+      await fetchAllData();
+    } catch (err: any) {
+      setBackupMessage(`✗ Restore failed: ${err.message}`);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "backup") {
+      fetchBackups();
+    }
+  }, [activeTab]);
+
   const getTableColumns = () => {
     switch (activeTab) {
       case "students":
@@ -296,18 +348,20 @@ function AdminPanelContent() {
         {/* Header */}
         <div className="bg-white border-b border-slate-200 p-6 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-slate-800">Admin Panel</h1>
-          <button
-            onClick={handleAdd}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-          >
-            + Add {activeTab.slice(0, -1).toUpperCase()}
-          </button>
+          {activeTab !== "backup" && (
+            <button
+              onClick={handleAdd}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+            >
+              + Add {activeTab.slice(0, -1).toUpperCase()}
+            </button>
+          )}
         </div>
 
         {/* Tabs */}
         <div className="border-b border-slate-200 bg-white">
           <div className="px-6 flex gap-8">
-            {["students", "users", "instructors", "courses", "assessments", "enrollments"].map((tab) => (
+            {["students", "users", "instructors", "courses", "assessments", "enrollments", "backup"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -512,7 +566,74 @@ function AdminPanelContent() {
             </div>
           )}
 
+          {/* Backup & Restore Section */}
+          {activeTab === "backup" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-lg p-6">
+                <h3 className="font-bold text-lg text-slate-800 mb-4">Database Backup & Restore</h3>
+                
+                {backupMessage && (
+                  <div className={`p-4 rounded-lg mb-4 ${backupMessage.startsWith('✓') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {backupMessage}
+                  </div>
+                )}
+
+                <div className="flex gap-4 mb-6">
+                  <button
+                    onClick={handleCreateBackup}
+                    disabled={backupLoading}
+                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-semibold disabled:opacity-50"
+                  >
+                    {backupLoading ? "Creating Backup..." : "🗄️ Create New Backup"}
+                  </button>
+                  <button
+                    onClick={fetchBackups}
+                    disabled={backupLoading}
+                    className="bg-slate-200 text-slate-700 px-6 py-3 rounded-lg hover:bg-slate-300 font-semibold disabled:opacity-50"
+                  >
+                    🔄 Refresh List
+                  </button>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="font-semibold text-slate-700 mb-3">Available Backups</h4>
+                  
+                  {backupsList.length === 0 ? (
+                    <p className="text-slate-500 text-sm">No backups found. Create your first backup above.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {backupsList.map((b) => (
+                        <div key={b.name} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                          <div>
+                            <p className="font-medium text-slate-800">{b.name}</p>
+                            <p className="text-xs text-slate-500">
+                              Created: {new Date(b.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleRestoreBackup(b.name)}
+                            disabled={backupLoading}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-semibold disabled:opacity-50"
+                          >
+                            ♻️ Restore
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>⚠️ Warning:</strong> Restoring a backup will replace all current data in the database. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Table */}
+          {activeTab !== "backup" && (
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
@@ -552,6 +673,7 @@ function AdminPanelContent() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@ const url = `${API_URL}${endpoint}`;
 
 // Auth endpoints
 export const auth = {
-  register: (data: { email: string; name: string; password: string; role: string }) =>
+  register: (data: { email: string; name: string; password: string; role: string; userId?: string }) =>
     apiCall("/auth/register", { method: "POST", body: JSON.stringify(data) }),
   login: (data: { email: string; password: string }) =>
     apiCall("/auth/login", { method: "POST", body: JSON.stringify(data) }),
@@ -108,6 +108,13 @@ export const transactionLogs = {
 export const analytics = {
   getCLOAchievement: (courseId?: string) =>
     apiCall(`/analytics${courseId ? `?courseId=${courseId}` : ""}`),
+};
+
+// Backup endpoints
+export const backup = {
+  createBackup: () => apiCall("/backup/backup", { method: "POST" }),
+  listBackups: () => apiCall("/backup/backups"),
+  restore: (backupName: string) => apiCall(`/backup/restore/${backupName}`, { method: "POST" }),
 };
 
 // Utility: Decode JWT to get user info
