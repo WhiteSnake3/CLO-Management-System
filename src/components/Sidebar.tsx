@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -40,8 +41,15 @@ export default function Sidebar() {
   return (
     <div className="w-48 bg-white border-r border-slate-200 min-h-screen flex flex-col p-4">
       {/* Logo */}
-      <div className="mb-8">
-        <div className="text-lg font-bold text-slate-800">📋 AUBH Logo</div>
+      <div className="mb-8 flex justify-center">
+        <Image
+          src="/aubhlogo.png"
+          alt="AUBH Logo"
+          width={120}
+          height={60}
+          className="object-contain"
+          priority
+        />
       </div>
 
       {/* Navigation */}
