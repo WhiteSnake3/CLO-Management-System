@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { courses, getUserFromToken } from "@/lib/api";
@@ -10,6 +10,24 @@ export default function CoursesPage() {
   const [courseList, setCourseList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
+  const [hoverUnderlineStyle, setHoverUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const handleTabHover = (index: number) => {
+    if (tabRefs.current[index]) {
+      const tab = tabRefs.current[index]!;
+      setHoverUnderlineStyle({
+        left: tab.offsetLeft,
+        width: tab.offsetWidth,
+        opacity: 1,
+      });
+    }
+  };
+
+  const handleTabLeave = () => {
+    setHoverUnderlineStyle(prev => ({ ...prev, opacity: 0 }));
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -46,6 +64,17 @@ export default function CoursesPage() {
     }
   };
 
+  useEffect(() => {
+    // Set underline position for active tab (index 1 - Courses)
+    if (tabRefs.current[1]) {
+      const tab = tabRefs.current[1];
+      setUnderlineStyle({
+        left: tab.offsetLeft,
+        width: tab.offsetWidth,
+      });
+    }
+  }, [user]);
+
   return (
     <div className="flex bg-slate-50 min-h-screen">
       <Sidebar />
@@ -57,6 +86,77 @@ export default function CoursesPage() {
           <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
             + Add Course
           </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-slate-200 bg-white">
+          <div className="max-w-7xl mx-auto px-6 flex gap-8 relative">
+            <button
+              ref={(el) => { tabRefs.current[0] = el; }}
+              onClick={() => router.push("/dashboard")}
+              onMouseEnter={() => handleTabHover(0)}
+              onMouseLeave={handleTabLeave}
+              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+            >
+              CLO Achievement
+            </button>
+            <button
+              ref={(el) => { tabRefs.current[1] = el; }}
+              onClick={() => router.push("/dashboard/courses")}
+              onMouseEnter={() => handleTabHover(1)}
+              onMouseLeave={handleTabLeave}
+              className="py-4 font-medium text-sm text-indigo-600 transition-colors duration-300 ease-in-out relative z-10"
+            >
+              Courses
+            </button>
+            <button
+              ref={(el) => { tabRefs.current[2] = el; }}
+              onClick={() => router.push("/dashboard/assessments")}
+              onMouseEnter={() => handleTabHover(2)}
+              onMouseLeave={handleTabLeave}
+              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+            >
+              Assessments
+            </button>
+            {user?.role === "instructor" && (
+              <button
+                ref={(el) => { tabRefs.current[3] = el; }}
+                onMouseEnter={() => handleTabHover(3)}
+                onMouseLeave={handleTabLeave}
+                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              >
+                Students <span className="ml-1 bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full text-xs transition-all duration-300">99+</span>
+              </button>
+            )}
+            {user?.role === "admin" && (
+              <button
+                ref={(el) => { tabRefs.current[4] = el; }}
+                onClick={() => router.push("/dashboard/admin")}
+                onMouseEnter={() => handleTabHover(4)}
+                onMouseLeave={handleTabLeave}
+                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              >
+                Admin Panel
+              </button>
+            )}
+            {/* Active underline */}
+            <div
+              className="absolute bottom-0 h-0.5 bg-indigo-600 transition-all duration-300 ease-in-out z-0"
+              style={{
+                left: `${underlineStyle.left}px`,
+                width: `${underlineStyle.width}px`,
+              }}
+            />
+            {/* Hover underline */}
+            <div
+              className="absolute bottom-0 h-0.5 bg-slate-400 transition-all duration-200 ease-in-out z-0"
+              style={{
+                left: `${hoverUnderlineStyle.left}px`,
+                width: `${hoverUnderlineStyle.width}px`,
+                opacity: hoverUnderlineStyle.opacity,
+              }}
+            />
+          </div>
         </div>
 
         {/* Content */}

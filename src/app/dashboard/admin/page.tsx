@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { students, instructors, courses, users, assessments, enrollments, backup, transactionLogs, getUserFromToken } from "@/lib/api";
@@ -10,6 +10,36 @@ function AdminPanelContent() {
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("students");
   const [loading, setLoading] = useState(true);
+  const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
+  const [hoverUnderlineStyle, setHoverUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const adminTabRef = useRef<HTMLButtonElement>(null);
+
+  const handleTabHover = (index: number) => {
+    if (tabRefs.current[index]) {
+      const tab = tabRefs.current[index]!;
+      setHoverUnderlineStyle({
+        left: tab.offsetLeft,
+        width: tab.offsetWidth,
+        opacity: 1,
+      });
+    }
+  };
+
+  const handleAdminTabHover = () => {
+    if (adminTabRef.current) {
+      const tab = adminTabRef.current;
+      setHoverUnderlineStyle({
+        left: tab.offsetLeft,
+        width: tab.offsetWidth,
+        opacity: 1,
+      });
+    }
+  };
+
+  const handleTabLeave = () => {
+    setHoverUnderlineStyle(prev => ({ ...prev, opacity: 0 }));
+  };
 
   // Entity states
   const [studentsList, setStudentsList] = useState<any[]>([]);
@@ -73,6 +103,17 @@ function AdminPanelContent() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Set underline position for active tab (Admin Panel)
+    if (adminTabRef.current) {
+      const tab = adminTabRef.current;
+      setUnderlineStyle({
+        left: tab.offsetLeft,
+        width: tab.offsetWidth,
+      });
+    }
+  }, [user]);
 
   const cleanDataForLog = (data: any) => {
     const cleaned = { ...data };
@@ -358,17 +399,85 @@ function AdminPanelContent() {
           )}
         </div>
 
+        {/* Navigation Tabs */}
+        <div className="border-b border-slate-200 bg-white">
+          <div className="px-6 flex gap-8 relative">
+            <button
+              ref={(el) => { tabRefs.current[0] = el; }}
+              onClick={() => router.push("/dashboard")}
+              onMouseEnter={() => handleTabHover(0)}
+              onMouseLeave={handleTabLeave}
+              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+            >
+              CLO Achievement
+            </button>
+            <button
+              ref={(el) => { tabRefs.current[1] = el; }}
+              onClick={() => router.push("/dashboard/courses")}
+              onMouseEnter={() => handleTabHover(1)}
+              onMouseLeave={handleTabLeave}
+              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+            >
+              Courses
+            </button>
+            <button
+              ref={(el) => { tabRefs.current[2] = el; }}
+              onClick={() => router.push("/dashboard/assessments")}
+              onMouseEnter={() => handleTabHover(2)}
+              onMouseLeave={handleTabLeave}
+              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+            >
+              Assessments
+            </button>
+            {user?.role === "instructor" && (
+              <button
+                ref={(el) => { tabRefs.current[3] = el; }}
+                onMouseEnter={() => handleTabHover(3)}
+                onMouseLeave={handleTabLeave}
+                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              >
+                Students <span className="ml-1 bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full text-xs transition-all duration-300">99+</span>
+              </button>
+            )}
+            <button
+              ref={adminTabRef}
+              onClick={() => router.push("/dashboard/admin")}
+              onMouseEnter={handleAdminTabHover}
+              onMouseLeave={handleTabLeave}
+              className="py-4 font-medium text-sm text-indigo-600 transition-colors duration-300 ease-in-out relative z-10"
+            >
+              Admin Panel
+            </button>
+            {/* Active underline */}
+            <div
+              className="absolute bottom-0 h-0.5 bg-indigo-600 transition-all duration-300 ease-in-out"
+              style={{
+                left: `${underlineStyle.left}px`,
+                width: `${underlineStyle.width}px`,
+              }}
+            />
+            {/* Hover underline */}
+            <div
+              className="absolute bottom-0 h-0.5 bg-slate-400 transition-all duration-200 ease-in-out"
+              style={{
+                left: `${hoverUnderlineStyle.left}px`,
+                width: `${hoverUnderlineStyle.width}px`,
+                opacity: hoverUnderlineStyle.opacity,
+              }}
+            />
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="border-b border-slate-200 bg-white">
-          <div className="px-6 flex gap-8">
-            {["students", "users", "instructors", "courses", "assessments", "enrollments", "backup"].map((tab) => (
+          <div className="px-6 flex gap-8">{["students", "users", "instructors", "courses", "assessments", "enrollments", "backup"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 font-medium text-sm border-b-2 transition ${
+                className={`py-4 font-medium text-sm border-b-2 transition-all duration-300 ease-in-out ${
                   activeTab === tab
                     ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-slate-600 hover:text-slate-800"
+                    : "border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300"
                 }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
