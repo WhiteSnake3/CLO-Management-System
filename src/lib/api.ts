@@ -25,7 +25,15 @@ const url = `${API_URL}${endpoint}`;
     throw new Error(`API error: ${response.statusText}`);
   }
 
-  return response.json();
+  // Handle empty responses (like 204 No Content)
+  const contentLength = response.headers.get("content-length");
+  if (response.status === 204 || contentLength === "0") {
+    return null;
+  }
+
+  // Check if response has content
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 };
 
 // Auth endpoints
