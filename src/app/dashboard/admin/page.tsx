@@ -491,6 +491,18 @@ function AdminPanelContent() {
 
         {/* Content */}
         <div className="max-w-7xl mx-auto p-6">
+          {/* Add New Button */}
+          {activeTab !== "backup" && !showForm && (
+            <div className="mb-6">
+              <button
+                onClick={handleAdd}
+                className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-semibold flex items-center gap-2"
+              >
+                <span>+</span> Add New {activeTab.slice(0, -1).charAt(0).toUpperCase() + activeTab.slice(0, -1).slice(1)}
+              </button>
+            </div>
+          )}
+
           {/* Add/Edit Form */}
           {showForm && (
             <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
