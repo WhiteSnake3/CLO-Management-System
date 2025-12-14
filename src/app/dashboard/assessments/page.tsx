@@ -13,6 +13,7 @@ function AssessmentsContent() {
   const [courseList, setCourseList] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState(courseId || "");
   const [assessmentList, setAssessmentList] = useState<any[]>([]);
+  const [allAssessmentsList, setAllAssessmentsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
@@ -67,8 +68,12 @@ function AssessmentsContent() {
 
   const fetchCourses = async () => {
     try {
-      const allCourses = await courses.getAll();
+      const [allCourses, allAssessments] = await Promise.all([
+        courses.getAll(),
+        assessments.getAll(),
+      ]);
       setCourseList(allCourses);
+      setAllAssessmentsList(allAssessments);
       if (courseId) {
         setSelectedCourse(courseId);
       }
@@ -121,32 +126,35 @@ function AssessmentsContent() {
   }, [user]);
 
   return (
-    <div className="flex bg-slate-50 min-h-screen">
+    <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
 
       <div className="flex-1">
-        {/* Header */}
-        <div className="bg-white border-b border-slate-200 p-6 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-slate-800">Assessments</h1>
-          {selectedCourse && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-            >
-              {showForm ? "Cancel" : "+ Add Assessment"}
-            </button>
-          )}
+        {/* Top Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+          <div>
+            <h1 className="text-lg font-semibold text-gray-800">Learning Outcomes Portal</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-800">{user?.name || "User"}</p>
+              <p className="text-xs text-gray-500">{user?.role === "instructor" ? "Faculty" : user?.role}</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold">
+              {user?.name?.charAt(0) || "U"}
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="max-w-7xl mx-auto px-6 flex gap-8 relative">
+        <div className="border-b border-gray-200 bg-white">
+          <div className="px-6 flex gap-6 relative">
             <button
               ref={(el) => { tabRefs.current[0] = el; }}
               onClick={() => router.push("/dashboard")}
               onMouseEnter={() => handleTabHover(0)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
             >
               CLO Achievement
             </button>
@@ -155,27 +163,27 @@ function AssessmentsContent() {
               onClick={() => router.push("/dashboard/courses")}
               onMouseEnter={() => handleTabHover(1)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
             >
-              Courses
+              Courses <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{courseList.length}</span>
             </button>
             <button
               ref={(el) => { tabRefs.current[2] = el; }}
               onClick={() => router.push("/dashboard/assessments")}
               onMouseEnter={() => handleTabHover(2)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-indigo-600 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-800 transition-colors relative z-10 flex items-center gap-1"
             >
-              Assessments
+              Assessments <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{allAssessmentsList.length}</span>
             </button>
             {user?.role === "instructor" && (
               <button
                 ref={(el) => { tabRefs.current[3] = el; }}
                 onMouseEnter={() => handleTabHover(3)}
                 onMouseLeave={handleTabLeave}
-                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
               >
-                Students <span className="ml-1 bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full text-xs transition-all duration-300">99+</span>
+                Students <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">216</span>
               </button>
             )}
             {user?.role === "admin" && (
@@ -184,7 +192,7 @@ function AssessmentsContent() {
                 onClick={() => router.push("/dashboard/admin")}
                 onMouseEnter={() => handleTabHover(4)}
                 onMouseLeave={handleTabLeave}
-                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
               >
                 Admin Panel
               </button>
@@ -199,7 +207,7 @@ function AssessmentsContent() {
             />
             {/* Hover underline */}
             <div
-              className="absolute bottom-0 h-0.5 bg-slate-400 transition-all duration-200 ease-in-out z-0"
+              className="absolute bottom-0 h-0.5 bg-gray-400 transition-all duration-200 ease-in-out z-0"
               style={{
                 left: `${hoverUnderlineStyle.left}px`,
                 width: `${hoverUnderlineStyle.width}px`,
@@ -210,161 +218,171 @@ function AssessmentsContent() {
         </div>
 
         {/* Content */}
-        <div className="max-w-7xl mx-auto p-6">
-          {/* Course Selector */}
+        <div className="p-6">
+          {/* Header */}
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Select Course
-            </label>
-            <select
-              value={selectedCourse}
-              onChange={(e) => {
-                setSelectedCourse(e.target.value);
-                setShowForm(false);
-              }}
-              className="w-full md:w-96 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            >
-              <option value="">-- Choose a Course --</option>
-              {courseList.map((course) => (
-                <option key={course._id} value={course._id}>
-                  {course.courseId} - {course.title}
-                </option>
-              ))}
-            </select>
+            <h2 className="text-2xl font-bold text-gray-900">Assessments</h2>
+            <p className="text-sm text-gray-500 mt-1">Upload grades, map to CLOs, and manage assessment data</p>
           </div>
 
-          {/* Add Assessment Form */}
-          {showForm && selectedCourse && (
-            <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
-              <h3 className="font-bold text-lg text-slate-800 mb-4">Create New Assessment</h3>
-              <form onSubmit={handleAddAssessment} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Title
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Type
-                    </label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) =>
-                        setFormData({ ...formData, type: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    >
-                      <option value="assignment">Assignment</option>
-                      <option value="exam">Exam</option>
-                      <option value="quiz">Quiz</option>
-                      <option value="project">Project</option>
-                    </select>
-                  </div>
+          {/* Upload Process Cards */}
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            {/* Step 1: Select Course */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">1. Select course</h3>
+              <p className="text-xs text-gray-500 mb-4">Choose where this assessment belongs</p>
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm mb-3"
+              >
+                <option value="">-- Choose a Course --</option>
+                {courseList.map((course) => (
+                  <option key={course._id} value={course._id}>
+                    {course.courseId} - {course.title}
+                  </option>
+                ))}
+              </select>
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600">
+                  <span className="font-semibold">Assessment:</span>
+                  <select className="w-full mt-1 px-2 py-1 border border-gray-300 rounded text-xs">
+                    <option>Select assessment</option>
+                  </select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Total Marks
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.totalMarks}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalMarks: parseInt(e.target.value) })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Due Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.dueDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dueDate: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    />
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-semibold"
-                >
-                  Create Assessment
-                </button>
-              </form>
+              </div>
             </div>
-          )}
 
-          {/* Assessments List */}
-          {selectedCourse && assessmentList.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-slate-500 text-lg">No assessments for this course</p>
+            {/* Step 2: Upload File */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">2. Upload file</h3>
+              <p className="text-xs text-gray-500 mb-4">Import grades from spreadsheet</p>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <p className="text-sm text-gray-500 mb-2">Drop file here or browse</p>
+                <p className="text-xs text-gray-400">.csv, .xls or .xlsx - Max 4.1 MB</p>
+              </div>
+              <button className="mt-3 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm font-medium">
+                grades_export2_exported.csv
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {assessmentList.map((assessment) => (
-                <div
-                  key={assessment._id}
-                  className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-800">{assessment.title}</h3>
-                      <p className="text-sm text-slate-600">
-                        Type: <span className="font-semibold">{assessment.type}</span>
-                      </p>
-                    </div>
-                    <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold">
-                      {assessment.totalMarks} marks
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm text-slate-600 mb-4">
-                    <div>
-                      <strong>Due Date:</strong>{" "}
-                      {assessment.dueDate
-                        ? new Date(assessment.dueDate).toLocaleDateString()
-                        : "N/A"}
-                    </div>
-                    <div>
-                      <strong>Assessment ID:</strong> {assessment.assessmentId}
-                    </div>
-                  </div>
-                  {assessment.cloMappings && assessment.cloMappings.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-semibold text-slate-700 mb-2">CLO Mappings:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {assessment.cloMappings.map((mapping: any, i: number) => (
-                          <span
-                            key={i}
-                            className="bg-slate-100 text-slate-700 px-2 py-1 text-xs rounded"
-                          >
-                            {mapping.cloId} ({mapping.weight * 100}%)
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
-                    Grade Assessment
-                  </button>
+
+            {/* Step 3: Map Columns */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">3. Map columns</h3>
+              <p className="text-xs text-gray-500 mb-4">Match file columns to student IDs, grades, and CLO IDs</p>
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Student ID</span>
+                  <span className="text-gray-400">Column C</span>
                 </div>
-              ))}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Student Name</span>
+                  <span className="text-gray-400">Column A</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Grade</span>
+                  <span className="text-gray-400">Column C</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">CLO mapping</span>
+                  <span className="text-gray-400">Based on question graph</span>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-medium">
+                  Review mapping
+                </button>
+                <button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-medium">
+                  Process
+                </button>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 mb-6">
+            <button className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+              <span>↓</span> Upload grades
+            </button>
+            <button className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+              <span>📄</span> Download template
+            </button>
+          </div>
+
+          {/* Existing Assessments Section */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Existing Assessments</h3>
+                  <p className="text-sm text-gray-500 mt-1">All assessments mapped to CLOs</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">Processed / Pending</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <table className="w-full">
+              <thead className="bg-indigo-900 text-white">
+                <tr>
+                  <th className="text-left py-3 px-4 font-semibold text-sm">Name</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm">Course</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm">Type</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm">CLO linked</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                  <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-gray-500">Loading...</td>
+                  </tr>
+                ) : allAssessmentsList.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12 text-gray-500">No assessments found</td>
+                  </tr>
+                ) : (
+                  allAssessmentsList.map((assessment) => {
+                    const course = courseList.find(c => c._id === assessment.courseId);
+                    return (
+                      <tr key={assessment._id} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 text-sm text-gray-700 font-medium">{assessment.title}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{course?.courseId || assessment.courseId}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 capitalize">{assessment.type}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">
+                          {assessment.dueDate ? new Date(assessment.dueDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-600">
+                          {assessment.cloMappings?.length > 0 
+                            ? assessment.cloMappings.map((m: any) => m.cloId).join(', ')
+                            : 'None'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Processed
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                              View
+                            </button>
+                            <button className="text-gray-600 hover:text-gray-800 text-sm font-medium">
+                              Reprocess
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

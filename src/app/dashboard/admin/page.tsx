@@ -382,32 +382,35 @@ function AdminPanelContent() {
   const fields = getFormFields();
 
   return (
-    <div className="flex bg-slate-50 min-h-screen">
+    <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
 
       <div className="flex-1">
-        {/* Header */}
-        <div className="bg-white border-b border-slate-200 p-6 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-slate-800">Admin Panel</h1>
-          {activeTab !== "backup" && (
-            <button
-              onClick={handleAdd}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
-            >
-              + Add {activeTab.slice(0, -1).toUpperCase()}
-            </button>
-          )}
+        {/* Top Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+          <div>
+            <h1 className="text-lg font-semibold text-gray-800">Learning Outcomes Portal</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-800">{user?.name || "Admin"}</p>
+              <p className="text-xs text-gray-500">{user?.role || "admin"}</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold">
+              {user?.name?.charAt(0) || "A"}
+            </div>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="px-6 flex gap-8 relative">
+        <div className="border-b border-gray-200 bg-white">
+          <div className="px-6 flex gap-6 relative">
             <button
               ref={(el) => { tabRefs.current[0] = el; }}
               onClick={() => router.push("/dashboard")}
               onMouseEnter={() => handleTabHover(0)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
             >
               CLO Achievement
             </button>
@@ -416,27 +419,27 @@ function AdminPanelContent() {
               onClick={() => router.push("/dashboard/courses")}
               onMouseEnter={() => handleTabHover(1)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
             >
-              Courses
+              Courses <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{coursesList.length}</span>
             </button>
             <button
               ref={(el) => { tabRefs.current[2] = el; }}
               onClick={() => router.push("/dashboard/assessments")}
               onMouseEnter={() => handleTabHover(2)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
             >
-              Assessments
+              Assessments <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{assessmentsList.length}</span>
             </button>
             {user?.role === "instructor" && (
               <button
                 ref={(el) => { tabRefs.current[3] = el; }}
                 onMouseEnter={() => handleTabHover(3)}
                 onMouseLeave={handleTabLeave}
-                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
               >
-                Students <span className="ml-1 bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full text-xs transition-all duration-300">99+</span>
+                Students <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">216</span>
               </button>
             )}
             <button
@@ -444,7 +447,7 @@ function AdminPanelContent() {
               onClick={() => router.push("/dashboard/admin")}
               onMouseEnter={handleAdminTabHover}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-indigo-600 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-800 transition-colors relative z-10"
             >
               Admin Panel
             </button>
@@ -458,7 +461,7 @@ function AdminPanelContent() {
             />
             {/* Hover underline */}
             <div
-              className="absolute bottom-0 h-0.5 bg-slate-400 transition-all duration-200 ease-in-out"
+              className="absolute bottom-0 h-0.5 bg-gray-400 transition-all duration-200 ease-in-out"
               style={{
                 left: `${hoverUnderlineStyle.left}px`,
                 width: `${hoverUnderlineStyle.width}px`,

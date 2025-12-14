@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import StatsCard from "@/components/StatsCard";
 import CLOChart from "@/components/CLOChart";
 import RecentAssessments from "@/components/RecentAssessments";
+import { courses, assessments } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -14,6 +15,8 @@ export default function DashboardPage() {
   const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
   const [hoverUnderlineStyle, setHoverUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
+  const [assessmentsList, setAssessmentsList] = useState<any[]>([]);
 
   const handleTabHover = (index: number) => {
     if (tabRefs.current[index]) {
@@ -48,8 +51,22 @@ export default function DashboardPage() {
     } catch {
       setUser({ name: "User", role: "Faculty", id: null });
     }
+    fetchCounts();
     setLoading(false);
   }, [router]);
+
+  const fetchCounts = async () => {
+    try {
+      const [coursesData, assessmentsData] = await Promise.all([
+        courses.getAll(),
+        assessments.getAll(),
+      ]);
+      setCoursesList(coursesData);
+      setAssessmentsList(assessmentsData);
+    } catch (err) {
+      console.error("Failed to fetch counts", err);
+    }
+  };
 
   useEffect(() => {
     // Set underline position for active tab (index 0)
@@ -65,43 +82,35 @@ export default function DashboardPage() {
   if (loading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
   return (
-    <div className="flex bg-slate-50 min-h-screen">
+    <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
       
       <div className="flex-1">
-        {/* Header */}
-        <div className="bg-white border-b border-slate-200 p-6 flex justify-between items-center">
+        {/* Top Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Learning Outcomes Portal</h1>
+            <h1 className="text-lg font-semibold text-gray-800">Learning Outcomes Portal</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <input
-              type="text"
-              placeholder="Search"
-              className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-            <button className="text-slate-500 hover:text-slate-700">🔍</button>
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-              <div className="text-right">
-                <p className="font-semibold text-slate-800">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.role}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold">
-                👤
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-800">{user?.name || "User"}</p>
+              <p className="text-xs text-gray-500">{user?.role === "instructor" ? "Faculty" : user?.role}</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold">
+              {user?.name?.charAt(0) || "U"}
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="max-w-7xl mx-auto px-6 flex gap-8 relative">
+        <div className="border-b border-gray-200 bg-white">
+          <div className="px-6 flex gap-6 relative">
             <button
               ref={(el) => { tabRefs.current[0] = el; }}
               onClick={() => router.push("/dashboard")}
               onMouseEnter={() => handleTabHover(0)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-indigo-600 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-800 transition-colors relative z-10"
             >
               CLO Achievement
             </button>
@@ -110,27 +119,27 @@ export default function DashboardPage() {
               onClick={() => router.push("/dashboard/courses")}
               onMouseEnter={() => handleTabHover(1)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
             >
-              Courses
+              Courses <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{coursesList.length}</span>
             </button>
             <button
               ref={(el) => { tabRefs.current[2] = el; }}
               onClick={() => router.push("/dashboard/assessments")}
               onMouseEnter={() => handleTabHover(2)}
               onMouseLeave={handleTabLeave}
-              className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
             >
-              Assessments
+              Assessments <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{assessmentsList.length}</span>
             </button>
             {user?.role === "instructor" && (
               <button
                 ref={(el) => { tabRefs.current[3] = el; }}
                 onMouseEnter={() => handleTabHover(3)}
                 onMouseLeave={handleTabLeave}
-                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
               >
-                Students <span className="ml-1 bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full text-xs transition-all duration-300">99+</span>
+                Students <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">216</span>
               </button>
             )}
             {user?.role === "admin" && (
@@ -139,7 +148,7 @@ export default function DashboardPage() {
                 onClick={() => router.push("/dashboard/admin")}
                 onMouseEnter={() => handleTabHover(4)}
                 onMouseLeave={handleTabLeave}
-                className="py-4 font-medium text-sm text-slate-600 hover:text-slate-800 transition-colors duration-300 ease-in-out relative z-10"
+                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
               >
                 Admin Panel
               </button>
@@ -154,7 +163,7 @@ export default function DashboardPage() {
             />
             {/* Hover underline */}
             <div
-              className="absolute bottom-0 h-0.5 bg-slate-400 transition-all duration-200 ease-in-out z-0"
+              className="absolute bottom-0 h-0.5 bg-gray-400 transition-all duration-200 ease-in-out z-0"
               style={{
                 left: `${hoverUnderlineStyle.left}px`,
                 width: `${hoverUnderlineStyle.width}px`,

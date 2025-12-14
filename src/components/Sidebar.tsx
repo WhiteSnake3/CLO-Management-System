@@ -31,10 +31,10 @@ export default function Sidebar() {
     { id: "home", label: "Home", icon: "🏠", href: "/dashboard" },
     { id: "courses", label: "Courses", icon: "📚", href: "/dashboard/courses" },
     { id: "assessments", label: "Assessments / Result", icon: "📊", href: "/dashboard/assessments" },
-    { id: "clo", label: "CLO Analysis", icon: "📈", href: "#" },
-    { id: "reports", label: "Reports", icon: "📋", href: "#" },
-    { id: "inbox", label: "Inbox", icon: "📬", href: "#" },
-    { id: "settings", label: "Settings", icon: "⚙️", href: "#" },
+    { id: "clo", label: "CLO Analysis", icon: "📈", href: "/dashboard/clo-analysis" },
+    { id: "reports", label: "Reports", icon: "📋", href: "/dashboard/reports" },
+    { id: "inbox", label: "Inbox", icon: "📬", href: "/dashboard/inbox" },
+    { id: "settings", label: "Settings", icon: "⚙️", href: "/dashboard/settings" },
     ...(userRole === "admin" ? [{ id: "admin", label: "Admin Panel", icon: "🔐", href: "/dashboard/admin" }] : []),
   ];
 
