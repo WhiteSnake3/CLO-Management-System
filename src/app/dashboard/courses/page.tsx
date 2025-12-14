@@ -3,12 +3,13 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import { courses, assessments, getUserFromToken } from "@/lib/api";
+import { courses, assessments, enrollments, getUserFromToken } from "@/lib/api";
 
 export default function CoursesPage() {
   const router = useRouter();
   const [courseList, setCourseList] = useState<any[]>([]);
   const [assessmentsList, setAssessmentsList] = useState<any[]>([]);
+  const [enrollmentsList, setEnrollmentsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
@@ -60,13 +61,15 @@ export default function CoursesPage() {
 
   const fetchInstructorCourses = async (instructorId: string) => {
     try {
-      // Fetch all courses and assessments
-      const [allCourses, allAssessments] = await Promise.all([
+      // Fetch all courses, assessments, and enrollments
+      const [allCourses, allAssessments, allEnrollments] = await Promise.all([
         courses.getAll(),
         assessments.getAll(),
+        enrollments.getAll(),
       ]);
       setCourseList(allCourses);
       setAssessmentsList(allAssessments);
+      setEnrollmentsList(allEnrollments);
     } catch (err) {
       console.error("Failed to fetch courses", err);
     } finally {
@@ -279,12 +282,14 @@ export default function CoursesPage() {
                     <td colSpan={6} className="text-center py-12 text-gray-500">No courses found</td>
                   </tr>
                 ) : (
-                  currentCourses.map((course) => (
+                  currentCourses.map((course) => {
+                    const enrolledCount = enrollmentsList.filter((e: any) => e.courseId === course.courseId).length;
+                    return (
                     <tr key={course._id} className="hover:bg-gray-50">
                       <td className="py-3 px-4 text-sm text-gray-700">{course.courseId}</td>
                       <td className="py-3 px-4 text-sm text-gray-700 font-medium">{course.title}</td>
                       <td className="py-3 px-4 text-sm text-gray-600">{course.instructorId}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600">-</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{enrolledCount}</td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           Active
@@ -293,7 +298,7 @@ export default function CoursesPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => router.push(`/dashboard/assessments?courseId=${course._id}`)}
+                            onClick={() => router.push(`/dashboard/assessments?courseId=${course.courseId}`)}
                             className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
                           >
                             View
@@ -304,7 +309,8 @@ export default function CoursesPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

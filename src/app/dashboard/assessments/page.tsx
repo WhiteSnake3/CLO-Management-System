@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import { assessments, courses, performances } from "@/lib/api";
+import { assessments, courses, performances, students } from "@/lib/api";
 
 function AssessmentsContent() {
   const router = useRouter();
@@ -26,6 +26,10 @@ function AssessmentsContent() {
     totalMarks: 100,
     dueDate: "",
   });
+  const [selectedAssessment, setSelectedAssessment] = useState<any>(null);
+  const [performanceList, setPerformanceList] = useState<any[]>([]);
+  const [loadingPerformances, setLoadingPerformances] = useState(false);
+  const [studentList, setStudentList] = useState<any[]>([]);
 
   const handleTabHover = (index: number) => {
     if (tabRefs.current[index]) {
@@ -68,12 +72,14 @@ function AssessmentsContent() {
 
   const fetchCourses = async () => {
     try {
-      const [allCourses, allAssessments] = await Promise.all([
+      const [allCourses, allAssessments, allStudents] = await Promise.all([
         courses.getAll(),
         assessments.getAll(),
+        students.getAll(),
       ]);
       setCourseList(allCourses);
       setAllAssessmentsList(allAssessments);
+      setStudentList(allStudents);
       if (courseId) {
         setSelectedCourse(courseId);
       }
@@ -91,6 +97,24 @@ function AssessmentsContent() {
       setAssessmentList(filtered);
     } catch (err) {
       console.error("Failed to fetch assessments", err);
+    }
+  };
+
+  const fetchPerformancesForAssessment = async (assessmentId: string) => {
+    setLoadingPerformances(true);
+    try {
+      const allPerformances = await performances.getAll();
+      console.log("All performances:", allPerformances);
+      console.log("Looking for assessment _id:", assessmentId);
+      // Filter by assessment _id since performance records store it as assessmentId
+      const filtered = allPerformances.filter((p: any) => p.assessmentId === assessmentId);
+      console.log("Filtered performances:", filtered);
+      setPerformanceList(filtered);
+    } catch (err) {
+      console.error("Failed to fetch performances", err);
+      setPerformanceList([]);
+    } finally {
+      setLoadingPerformances(false);
     }
   };
 
@@ -341,12 +365,12 @@ function AssessmentsContent() {
                   <tr>
                     <td colSpan={7} className="text-center py-12 text-gray-500">Loading...</td>
                   </tr>
-                ) : allAssessmentsList.length === 0 ? (
+                ) : (selectedCourse ? assessmentList : allAssessmentsList).length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center py-12 text-gray-500">No assessments found</td>
                   </tr>
                 ) : (
-                  allAssessmentsList.map((assessment) => {
+                  (selectedCourse ? assessmentList : allAssessmentsList).map((assessment) => {
                     const course = courseList.find(c => c._id === assessment.courseId);
                     return (
                       <tr key={assessment._id} className="hover:bg-gray-50">
@@ -368,7 +392,13 @@ function AssessmentsContent() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                            <button 
+                              onClick={() => {
+                                setSelectedAssessment(assessment);
+                                fetchPerformancesForAssessment(assessment.assessmentId);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                            >
                               View
                             </button>
                             <button className="text-gray-600 hover:text-gray-800 text-sm font-medium">
@@ -384,6 +414,87 @@ function AssessmentsContent() {
             </table>
           </div>
         </div>
+
+        {/* Performance Modal */}
+        {selectedAssessment && (
+          <div className="fixed inset-0 bg-transparent backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto">
+              {/* Modal Header */}
+              <div className="bg-indigo-900 text-white p-6 flex justify-between items-center sticky top-0">
+                <div>
+                  <h2 className="text-xl font-semibold">{selectedAssessment.title}</h2>
+                  <p className="text-indigo-200 text-sm mt-1">Student Performances</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedAssessment(null);
+                    setPerformanceList([]);
+                  }}
+                  className="text-white hover:bg-indigo-800 rounded-full p-2 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6">
+                {loadingPerformances ? (
+                  <div className="text-center py-12 text-gray-500">Loading performances...</div>
+                ) : performanceList.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">No performances found for this assessment</div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-b border-gray-200">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">StudentID</th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Score</th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Percentage</th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {performanceList.map((perf) => {
+                        const maxScore = perf.maxScore || selectedAssessment.totalMarks || 100;
+                        const percentage = Math.round((perf.score / maxScore) * 100);
+                        const statusColor = percentage >= 70 ? 'bg-green-100 text-green-800' : percentage >= 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+                        const student = studentList.find((s: any) => s.studentId === perf.studentId);
+                        const studentName = student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A';
+                        
+                        return (
+                          <tr key={perf._id} className="hover:bg-gray-50">
+                            <td className="py-3 px-4 text-sm text-gray-700 font-medium">{perf.studentId || 'N/A'}</td>
+                            <td className="py-3 px-4 text-sm text-gray-700">{studentName}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">{perf.score}/{maxScore}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">{percentage}%</td>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
+                                {percentage >= 70 ? 'Passed' : percentage >= 50 ? 'At Risk' : 'Failed'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-gray-200 p-6 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedAssessment(null);
+                    setPerformanceList([]);
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

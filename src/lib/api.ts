@@ -21,7 +21,24 @@ const url = `${API_URL}${endpoint}`;
     headers,
   });
 
+  // Handle error responses
   if (!response.ok) {
+    // Try to extract error message from response body
+    const contentLength = response.headers.get("content-length");
+    if (contentLength !== "0") {
+      try {
+        const text = await response.text();
+        if (text) {
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.msg || errorData.error || `API error: ${response.statusText}`);
+        }
+      } catch (parseErr: any) {
+        // If JSON parsing fails, use the status text
+        if (parseErr.message && !parseErr.message.includes("JSON")) {
+          throw parseErr;
+        }
+      }
+    }
     throw new Error(`API error: ${response.statusText}`);
   }
 

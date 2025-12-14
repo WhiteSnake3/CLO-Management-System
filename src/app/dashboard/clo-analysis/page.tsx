@@ -323,7 +323,7 @@ export default function CLOAnalysisPage() {
                 <div className="pt-3 border-t border-gray-200">
                   <p className="font-medium text-gray-700 mb-2 text-sm">Included assessments</p>
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Exams: 4</span>
+                    <span>Exams: 3</span>
                     <span>Projects: 2</span>
                   </div>
                 </div>

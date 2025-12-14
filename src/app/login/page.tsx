@@ -30,7 +30,14 @@ export default function LoginPage() {
       localStorage.setItem("token", response.token);
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      // Display specific error messages from backend
+      if (err.message.includes("User not found")) {
+        setError("No account found with this email. Please check and try again.");
+      } else if (err.message.includes("Invalid credentials")) {
+        setError("Incorrect password. Please try again.");
+      } else {
+        setError(err.message || "Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
