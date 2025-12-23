@@ -326,7 +326,7 @@ function AssessmentsContent() {
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 mb-6">
             <button className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-              <span>↓</span> Upload grades
+              <span>↑</span> Upload grades
             </button>
             <button className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
               <span>📄</span> Download template
