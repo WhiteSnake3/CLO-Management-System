@@ -191,9 +191,6 @@ export default function SettingsPage() {
               <button className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
                 ✏️ Edit Settings
               </button>
-              <button className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
-                ⬇️ Download Submissions
-              </button>
             </div>
           </div>
 
