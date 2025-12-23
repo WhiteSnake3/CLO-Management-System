@@ -297,11 +297,11 @@ function AssessmentsContent() {
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Student ID</span>
-                  <span className="text-gray-400">Column C</span>
+                  <span className="text-gray-400">Column A</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Student Name</span>
-                  <span className="text-gray-400">Column A</span>
+                  <span className="text-gray-400">Column B</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Grade</span>
