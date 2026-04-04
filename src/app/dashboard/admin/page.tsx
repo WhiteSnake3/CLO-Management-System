@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DashboardTopBar from "@/components/DashboardTopBar";
@@ -24,6 +24,11 @@ function AdminPanelContent() {
   const [backupsList, setBackupsList] = useState<any[]>([]);
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
+
+  // Mass enrollment states
+  const [massEnrollLoading, setMassEnrollLoading] = useState(false);
+  const [massEnrollResult, setMassEnrollResult] = useState<any>(null);
+  const massEnrollFileRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -283,6 +288,120 @@ function AdminPanelContent() {
     }
   }, [activeTab]);
 
+  const handleDownloadTemplate = () => {
+    const headers = ["studentid", "firstname", "lastname", "email", "program", "year", "courseid", "term"];
+    const example = ["S001", "Jane", "Doe", "jane.doe@example.com", "Computer Science", "2", "COSC412", "Fall 2026"];
+    const csvContent = headers.join(",") + "\n" + example.join(",") + "\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "mass_enrollment_template.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleMassEnrollUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setMassEnrollLoading(true);
+    setMassEnrollResult(null);
+    try {
+      const text = await file.text();
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) {
+        setMassEnrollResult({ error: "CSV file is empty or has no data rows." });
+        return;
+      }
+      const parseCSVLine = (line: string) =>
+        line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, ""));
+      const rows = lines
+        .slice(1)
+        .map((line) => {
+          const values = parseCSVLine(line);
+          const obj: any = {};
+          headers.forEach((h, i) => { obj[h] = values[i] ?? ""; });
+          return obj;
+        })
+        .filter((r) => r.studentid?.trim());
+
+      if (rows.length === 0) {
+        setMassEnrollResult({ error: "No valid data rows found in the CSV." });
+        return;
+      }
+
+      const [existingStudents, existingEnrollments] = await Promise.all([
+        students.getAll(),
+        enrollments.getAll(),
+      ]);
+
+      const studentMap = new Map<string, boolean>();
+      for (const s of existingStudents) {
+        studentMap.set(String(s.studentId).toLowerCase(), true);
+      }
+
+      const enrollmentSet = new Set<string>();
+      let enrollCounter = 1;
+      for (const en of existingEnrollments) {
+        enrollmentSet.add(
+          `${String(en.studentId).toLowerCase()}|${String(en.courseId).toLowerCase()}|${String(en.term).toLowerCase()}`
+        );
+        const match = String(en.enrollmentId).match(/^E(\d+)$/i);
+        if (match) enrollCounter = Math.max(enrollCounter, parseInt(match[1]) + 1);
+      }
+
+      let studentsCreated = 0;
+      let studentsSkipped = 0;
+      let enrollmentsCreated = 0;
+      let enrollmentsSkipped = 0;
+
+      for (const row of rows) {
+        const { studentid, firstname, lastname, email, program, year, courseid, term } = row;
+        const sidKey = String(studentid).toLowerCase();
+
+        if (!studentMap.has(sidKey)) {
+          await students.create({
+            studentId: studentid,
+            firstName: firstname,
+            lastName: lastname,
+            email: email,
+            program: program,
+            year: parseInt(year) || 1,
+          });
+          studentMap.set(sidKey, true);
+          studentsCreated++;
+        } else {
+          studentsSkipped++;
+        }
+
+        const enrollKey = `${sidKey}|${String(courseid).toLowerCase()}|${String(term).toLowerCase()}`;
+        if (!enrollmentSet.has(enrollKey)) {
+          await enrollments.create({
+            enrollmentId: `E${enrollCounter}`,
+            studentId: studentid,
+            courseId: courseid,
+            term: term,
+            status: "active",
+          });
+          enrollmentSet.add(enrollKey);
+          enrollCounter++;
+          enrollmentsCreated++;
+        } else {
+          enrollmentsSkipped++;
+        }
+      }
+
+      setMassEnrollResult({ studentsCreated, studentsSkipped, enrollmentsCreated, enrollmentsSkipped });
+      fetchAllData();
+    } catch (err: any) {
+      setMassEnrollResult({ error: `Failed: ${err.message}` });
+    } finally {
+      setMassEnrollLoading(false);
+    }
+  };
+
   const getTableColumns = () => {
     switch (activeTab) {
       case "students":
@@ -351,7 +470,7 @@ function AdminPanelContent() {
 
         {/* Tabs */}
         <div className="border-b border-slate-200 bg-white">
-          <div className="px-6 flex gap-8">{["students", "users", "instructors", "courses", "assessments", "enrollments", "backup"].map((tab) => (
+          <div className="px-6 flex gap-8">{["students", "users", "instructors", "courses", "assessments", "enrollments", "mass-enrollment", "backup"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -361,7 +480,7 @@ function AdminPanelContent() {
                     : "border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300"
                 }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "mass-enrollment" ? "Mass Enrollment" : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -369,8 +488,76 @@ function AdminPanelContent() {
 
         {/* Content */}
         <div className="max-w-7xl mx-auto p-6">
+          {/* Mass Enrollment Section */}
+          {activeTab === "mass-enrollment" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-lg p-6">
+                <h3 className="font-bold text-lg text-slate-800 mb-1">Mass Enrollment</h3>
+                <p className="text-sm text-slate-500 mb-6">Download the CSV template, fill in student and course data, then upload to create students and enroll them in bulk.</p>
+
+                <div className="mb-6">
+                  <h4 className="font-semibold text-slate-700 mb-2">Step 1 — Download Template</h4>
+                  <p className="text-xs text-slate-500 mb-3">The template contains one example row. Fill it with your data and save as CSV.</p>
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="bg-slate-200 text-slate-700 px-5 py-2.5 rounded-lg hover:bg-slate-300 font-semibold flex items-center gap-2"
+                  >
+                    ⬇️ Download Template CSV
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <h4 className="font-semibold text-slate-700 mb-2">Step 2 — Upload Filled CSV</h4>
+                  <p className="text-xs text-slate-500 mb-3">Students that already exist will not be duplicated. Enrollments that already exist will be skipped.</p>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    ref={massEnrollFileRef}
+                    onChange={handleMassEnrollUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => massEnrollFileRef.current?.click()}
+                    disabled={massEnrollLoading}
+                    className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 font-semibold flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {massEnrollLoading ? "Processing..." : "📤 Upload CSV"}
+                  </button>
+                </div>
+
+                {massEnrollResult && (
+                  <div className={`p-4 rounded-lg border ${
+                    massEnrollResult.error
+                      ? "bg-red-50 border-red-200 text-red-700"
+                      : "bg-green-50 border-green-200 text-green-800"
+                  }`}>
+                    {massEnrollResult.error ? (
+                      <p className="font-medium">✗ {massEnrollResult.error}</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold mb-2">✓ Mass enrollment complete!</p>
+                        <ul className="text-sm space-y-1">
+                          <li>Students created: <strong>{massEnrollResult.studentsCreated}</strong></li>
+                          <li>Students already existed (skipped): <strong>{massEnrollResult.studentsSkipped}</strong></li>
+                          <li>Enrollments created: <strong>{massEnrollResult.enrollmentsCreated}</strong></li>
+                          <li>Enrollments already existed (skipped): <strong>{massEnrollResult.enrollmentsSkipped}</strong></li>
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>ℹ️ CSV Columns:</strong> studentid, firstname, lastname, email, program, year, courseid, term
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Add New Button */}
-          {activeTab !== "backup" && !showForm && (
+          {activeTab !== "backup" && activeTab !== "mass-enrollment" && !showForm && (
             <div className="mb-6">
               <button
                 onClick={handleAdd}
@@ -382,7 +569,7 @@ function AdminPanelContent() {
           )}
 
           {/* Add/Edit Form */}
-          {showForm && (
+          {activeTab !== "mass-enrollment" && showForm && (
             <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
               <h3 className="font-bold text-lg text-slate-800 mb-4">
                 {editingId ? "Edit" : "Add New"} {activeTab.slice(0, -1)}
@@ -635,7 +822,7 @@ function AdminPanelContent() {
           )}
 
           {/* Table */}
-          {activeTab !== "backup" && (
+          {activeTab !== "backup" && activeTab !== "mass-enrollment" && (
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
