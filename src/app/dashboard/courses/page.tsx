@@ -6,16 +6,17 @@ import Sidebar from "@/components/Sidebar";
 import DashboardTopBar from "@/components/DashboardTopBar";
 import DashboardNavTabs from "@/components/DashboardNavTabs";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
-import { courses, enrollments } from "@/lib/api";
+import { courses, enrollments, instructors } from "@/lib/api";
 
 export default function CoursesPage() {
   const router = useRouter();
   const [courseList, setCourseList] = useState<any[]>([]);
   const [enrollmentsList, setEnrollmentsList] = useState<any[]>([]);
+  const [instructorsList, setInstructorsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTerm, setSelectedTerm] = useState("Fall 2025");
+  const [selectedTerm, setSelectedTerm] = useState("All Terms");
   const [selectedProgram, setSelectedProgram] = useState("All Programs");
   const [selectedInstructor, setSelectedInstructor] = useState("Me");
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,12 +47,14 @@ export default function CoursesPage() {
 
   const fetchInstructorCourses = async (instructorId: string) => {
     try {
-      const [allCourses, allEnrollments] = await Promise.all([
+      const [allCourses, allEnrollments, allInstructors] = await Promise.all([
         courses.getAll(),
         enrollments.getAll(),
+        instructors.getAll(),
       ]);
       setCourseList(allCourses);
       setEnrollmentsList(allEnrollments);
+      setInstructorsList(allInstructors);
     } catch (err) {
       console.error("Failed to fetch courses", err);
     } finally {
@@ -59,11 +62,45 @@ export default function CoursesPage() {
     }
   };
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTerm, selectedProgram, selectedInstructor, searchQuery]);
+
+  // Build instructor lookup map
+  const instructorMap = instructorsList.reduce((acc: Record<string, string>, inst: any) => {
+    acc[inst.instructorId] = inst.name;
+    return acc;
+  }, {});
+
+  // Dynamic filter options derived from data
+  const uniqueTerms = ["All Terms", ...Array.from(new Set<string>(courseList.map((c: any) => c.term).filter(Boolean)))];
+  const uniquePrograms = ["All Programs", ...Array.from(new Set<string>(courseList.map((c: any) => c.department).filter(Boolean)))];
+
+  // Find current user's instructor record (match by name)
+  const myInstructor = instructorsList.find((i: any) => i.name === user?.name);
+
+  // Apply filters
+  const filteredCourses = courseList.filter((course: any) => {
+    const matchesTerm = selectedTerm === "All Terms" || course.term === selectedTerm;
+    const matchesProgram = selectedProgram === "All Programs" || course.department === selectedProgram;
+    const matchesInstructor =
+      selectedInstructor === "All Instructors" ||
+      (selectedInstructor === "Me"
+        ? myInstructor ? course.instructorId === myInstructor.instructorId : true
+        : true);
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      !q ||
+      course.courseId?.toLowerCase().includes(q) ||
+      course.title?.toLowerCase().includes(q);
+    return matchesTerm && matchesProgram && matchesInstructor && matchesSearch;
+  });
+
   // Calculate pagination
-  const totalPages = Math.ceil(courseList.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentCourses = courseList.slice(startIndex, endIndex);
+  const currentCourses = filteredCourses.slice(startIndex, endIndex);
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
@@ -103,9 +140,9 @@ export default function CoursesPage() {
                   onChange={(e) => setSelectedTerm(e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option>Fall 2025</option>
-                  <option>Spring 2025</option>
-                  <option>Summer 2025</option>
+                  {uniqueTerms.map((term) => (
+                    <option key={term}>{term}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex items-center gap-2">
@@ -115,9 +152,9 @@ export default function CoursesPage() {
                   onChange={(e) => setSelectedProgram(e.target.value)}
                   className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option>All Programs</option>
-                  <option>Computer Science</option>
-                  <option>Business</option>
+                  {uniquePrograms.map((prog) => (
+                    <option key={prog}>{prog}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex items-center gap-2">
@@ -167,25 +204,20 @@ export default function CoursesPage() {
                     <tr key={course._id} className="hover:bg-gray-50">
                       <td className="py-3 px-4 text-sm text-gray-700">{course.courseId}</td>
                       <td className="py-3 px-4 text-sm text-gray-700 font-medium">{course.title}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600">{course.instructorId}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{instructorMap[course.instructorId] || course.instructorId}</td>
                       <td className="py-3 px-4 text-sm text-gray-600">{enrolledCount}</td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           Active
                         </span>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => router.push(`/dashboard/assessments?courseId=${course.courseId}`)}
-                            className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                          >
-                            View
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-800 text-sm font-medium">
-                            Edit
-                          </button>
-                        </div>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => router.push(`/dashboard/assessments?courseId=${course.courseId}`)}
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                     );
@@ -196,10 +228,10 @@ export default function CoursesPage() {
           </div>
 
           {/* Pagination */}
-          {!loading && courseList.length > 0 && (
+          {!loading && filteredCourses.length > 0 && (
             <div className="mt-4 flex items-center justify-between">
               <p className="text-sm text-gray-600">
-                Showing {startIndex + 1}-{Math.min(endIndex, courseList.length)} of {courseList.length} courses
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredCourses.length)} of {filteredCourses.length} courses
               </p>
               <div className="flex items-center gap-2">
                 <button
