@@ -111,6 +111,20 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
           </span>
         </button>
 
+        {userRole === "instructor" && (
+          <button
+            ref={(el) => { tabRefs.current["students"] = el; }}
+            onMouseEnter={() => handleTabHover("students")}
+            onMouseLeave={handleTabLeave}
+            className={`${inactiveClass} flex items-center gap-1`}
+          >
+            Students{" "}
+            <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">
+              216
+            </span>
+          </button>
+        )}
+
         <button
           ref={(el) => { tabRefs.current["clo-analysis"] = el; }}
           onClick={() => router.push("/dashboard/clo-analysis")}
@@ -150,20 +164,6 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
         >
           Settings
         </button>
-
-        {userRole === "instructor" && (
-          <button
-            ref={(el) => { tabRefs.current["students"] = el; }}
-            onMouseEnter={() => handleTabHover("students")}
-            onMouseLeave={handleTabLeave}
-            className={`${inactiveClass} flex items-center gap-1`}
-          >
-            Students{" "}
-            <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">
-              216
-            </span>
-          </button>
-        )}
 
         {userRole === "admin" && (
           <button
