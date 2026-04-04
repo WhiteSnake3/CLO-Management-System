@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, Suspense, useRef } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import DashboardTopBar from "@/components/DashboardTopBar";
+import DashboardNavTabs from "@/components/DashboardNavTabs";
 import { students, instructors, courses, users, assessments, enrollments, backup, transactionLogs, getUserFromToken } from "@/lib/api";
 
 function AdminPanelContent() {
@@ -10,37 +12,6 @@ function AdminPanelContent() {
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("students");
   const [loading, setLoading] = useState(true);
-  const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
-  const [hoverUnderlineStyle, setHoverUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const adminTabRef = useRef<HTMLButtonElement>(null);
-
-  const handleTabHover = (index: number) => {
-    if (tabRefs.current[index]) {
-      const tab = tabRefs.current[index]!;
-      setHoverUnderlineStyle({
-        left: tab.offsetLeft,
-        width: tab.offsetWidth,
-        opacity: 1,
-      });
-    }
-  };
-
-  const handleAdminTabHover = () => {
-    if (adminTabRef.current) {
-      const tab = adminTabRef.current;
-      setHoverUnderlineStyle({
-        left: tab.offsetLeft,
-        width: tab.offsetWidth,
-        opacity: 1,
-      });
-    }
-  };
-
-  const handleTabLeave = () => {
-    setHoverUnderlineStyle(prev => ({ ...prev, opacity: 0 }));
-  };
-
   // Entity states
   const [studentsList, setStudentsList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -103,17 +74,6 @@ function AdminPanelContent() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    // Set underline position for active tab (Admin Panel)
-    if (adminTabRef.current) {
-      const tab = adminTabRef.current;
-      setUnderlineStyle({
-        left: tab.offsetLeft,
-        width: tab.offsetWidth,
-      });
-    }
-  }, [user]);
 
   const cleanDataForLog = (data: any) => {
     const cleaned = { ...data };
@@ -386,90 +346,8 @@ function AdminPanelContent() {
       <Sidebar />
 
       <div className="flex-1">
-        {/* Top Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-800">Learning Outcomes Portal</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-800">{user?.name || "Admin"}</p>
-              <p className="text-xs text-gray-500">{user?.role || "admin"}</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold">
-              {user?.name?.charAt(0) || "A"}
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="border-b border-gray-200 bg-white">
-          <div className="px-6 flex gap-6 relative">
-            <button
-              ref={(el) => { tabRefs.current[0] = el; }}
-              onClick={() => router.push("/dashboard")}
-              onMouseEnter={() => handleTabHover(0)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
-            >
-              CLO Achievement
-            </button>
-            <button
-              ref={(el) => { tabRefs.current[1] = el; }}
-              onClick={() => router.push("/dashboard/courses")}
-              onMouseEnter={() => handleTabHover(1)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-            >
-              Courses <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{coursesList.length}</span>
-            </button>
-            <button
-              ref={(el) => { tabRefs.current[2] = el; }}
-              onClick={() => router.push("/dashboard/assessments")}
-              onMouseEnter={() => handleTabHover(2)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-            >
-              Assessments <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{assessmentsList.length}</span>
-            </button>
-            {user?.role === "instructor" && (
-              <button
-                ref={(el) => { tabRefs.current[3] = el; }}
-                onMouseEnter={() => handleTabHover(3)}
-                onMouseLeave={handleTabLeave}
-                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-              >
-                Students <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">216</span>
-              </button>
-            )}
-            <button
-              ref={adminTabRef}
-              onClick={() => router.push("/dashboard/admin")}
-              onMouseEnter={handleAdminTabHover}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-800 transition-colors relative z-10"
-            >
-              Admin Panel
-            </button>
-            {/* Active underline */}
-            <div
-              className="absolute bottom-0 h-0.5 bg-indigo-600 transition-all duration-300 ease-in-out"
-              style={{
-                left: `${underlineStyle.left}px`,
-                width: `${underlineStyle.width}px`,
-              }}
-            />
-            {/* Hover underline */}
-            <div
-              className="absolute bottom-0 h-0.5 bg-gray-400 transition-all duration-200 ease-in-out"
-              style={{
-                left: `${hoverUnderlineStyle.left}px`,
-                width: `${hoverUnderlineStyle.width}px`,
-                opacity: hoverUnderlineStyle.opacity,
-              }}
-            />
-          </div>
-        </div>
+        <DashboardTopBar userName={user?.name} userRole={user?.role} />
+        <DashboardNavTabs userRole={user?.role || ""} />
 
         {/* Tabs */}
         <div className="border-b border-slate-200 bg-white">

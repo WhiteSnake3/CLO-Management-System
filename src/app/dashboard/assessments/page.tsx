@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense, useRef } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import DashboardTopBar from "@/components/DashboardTopBar";
+import DashboardNavTabs from "@/components/DashboardNavTabs";
+import DashboardPageHeader from "@/components/DashboardPageHeader";
 import { assessments, courses, performances, students } from "@/lib/api";
 
 function AssessmentsContent() {
@@ -17,9 +20,6 @@ function AssessmentsContent() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
-  const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
-  const [hoverUnderlineStyle, setHoverUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     type: "assignment",
@@ -30,21 +30,6 @@ function AssessmentsContent() {
   const [performanceList, setPerformanceList] = useState<any[]>([]);
   const [loadingPerformances, setLoadingPerformances] = useState(false);
   const [studentList, setStudentList] = useState<any[]>([]);
-
-  const handleTabHover = (index: number) => {
-    if (tabRefs.current[index]) {
-      const tab = tabRefs.current[index]!;
-      setHoverUnderlineStyle({
-        left: tab.offsetLeft,
-        width: tab.offsetWidth,
-        opacity: 1,
-      });
-    }
-  };
-
-  const handleTabLeave = () => {
-    setHoverUnderlineStyle(prev => ({ ...prev, opacity: 0 }));
-  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -138,116 +123,20 @@ function AssessmentsContent() {
     }
   };
 
-  useEffect(() => {
-    // Set underline position for active tab (index 2 - Assessments)
-    if (tabRefs.current[2]) {
-      const tab = tabRefs.current[2];
-      setUnderlineStyle({
-        left: tab.offsetLeft,
-        width: tab.offsetWidth,
-      });
-    }
-  }, [user]);
-
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
 
       <div className="flex-1">
-        {/* Top Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-800">Learning Outcomes Portal</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-800">{user?.name || "User"}</p>
-              <p className="text-xs text-gray-500">{user?.role === "instructor" ? "Faculty" : user?.role}</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold">
-              {user?.name?.charAt(0) || "U"}
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-gray-200 bg-white">
-          <div className="px-6 flex gap-6 relative">
-            <button
-              ref={(el) => { tabRefs.current[0] = el; }}
-              onClick={() => router.push("/dashboard")}
-              onMouseEnter={() => handleTabHover(0)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
-            >
-              CLO Achievement
-            </button>
-            <button
-              ref={(el) => { tabRefs.current[1] = el; }}
-              onClick={() => router.push("/dashboard/courses")}
-              onMouseEnter={() => handleTabHover(1)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-            >
-              Courses <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{courseList.length}</span>
-            </button>
-            <button
-              ref={(el) => { tabRefs.current[2] = el; }}
-              onClick={() => router.push("/dashboard/assessments")}
-              onMouseEnter={() => handleTabHover(2)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-            >
-              Assessments <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{allAssessmentsList.length}</span>
-            </button>
-            {user?.role === "instructor" && (
-              <button
-                ref={(el) => { tabRefs.current[3] = el; }}
-                onMouseEnter={() => handleTabHover(3)}
-                onMouseLeave={handleTabLeave}
-                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-              >
-                Students <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">216</span>
-              </button>
-            )}
-            {user?.role === "admin" && (
-              <button
-                ref={(el) => { tabRefs.current[4] = el; }}
-                onClick={() => router.push("/dashboard/admin")}
-                onMouseEnter={() => handleTabHover(4)}
-                onMouseLeave={handleTabLeave}
-                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
-              >
-                Admin Panel
-              </button>
-            )}
-            {/* Active underline */}
-            <div
-              className="absolute bottom-0 h-0.5 bg-indigo-600 transition-all duration-300 ease-in-out z-0"
-              style={{
-                left: `${underlineStyle.left}px`,
-                width: `${underlineStyle.width}px`,
-              }}
-            />
-            {/* Hover underline */}
-            <div
-              className="absolute bottom-0 h-0.5 bg-gray-400 transition-all duration-200 ease-in-out z-0"
-              style={{
-                left: `${hoverUnderlineStyle.left}px`,
-                width: `${hoverUnderlineStyle.width}px`,
-                opacity: hoverUnderlineStyle.opacity,
-              }}
-            />
-          </div>
-        </div>
+        <DashboardTopBar userName={user?.name} userRole={user?.role} />
+        <DashboardNavTabs userRole={user?.role || ""} />
 
         {/* Content */}
         <div className="p-6">
-          {/* Header */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Assessments</h2>
-            <p className="text-sm text-gray-500 mt-1">Upload grades, map to CLOs, and manage assessment data</p>
-          </div>
+          <DashboardPageHeader
+            title="Assessments"
+            subtitle="Upload grades, map to CLOs, and manage assessment data"
+          />
 
           {/* Upload Process Cards */}
           <div className="grid grid-cols-3 gap-6 mb-8">

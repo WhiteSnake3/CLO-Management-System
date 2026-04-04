@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import { courses, assessments, enrollments, getUserFromToken } from "@/lib/api";
+import DashboardTopBar from "@/components/DashboardTopBar";
+import DashboardNavTabs from "@/components/DashboardNavTabs";
+import DashboardPageHeader from "@/components/DashboardPageHeader";
+import { courses, enrollments } from "@/lib/api";
 
 export default function CoursesPage() {
   const router = useRouter();
   const [courseList, setCourseList] = useState<any[]>([]);
-  const [assessmentsList, setAssessmentsList] = useState<any[]>([]);
   const [enrollmentsList, setEnrollmentsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
-  const [hoverUnderlineStyle, setHoverUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("Fall 2025");
   const [selectedProgram, setSelectedProgram] = useState("All Programs");
@@ -22,20 +21,6 @@ export default function CoursesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const handleTabHover = (index: number) => {
-    if (tabRefs.current[index]) {
-      const tab = tabRefs.current[index]!;
-      setHoverUnderlineStyle({
-        left: tab.offsetLeft,
-        width: tab.offsetWidth,
-        opacity: 1,
-      });
-    }
-  };
-
-  const handleTabLeave = () => {
-    setHoverUnderlineStyle(prev => ({ ...prev, opacity: 0 }));
-  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -61,14 +46,11 @@ export default function CoursesPage() {
 
   const fetchInstructorCourses = async (instructorId: string) => {
     try {
-      // Fetch all courses, assessments, and enrollments
-      const [allCourses, allAssessments, allEnrollments] = await Promise.all([
+      const [allCourses, allEnrollments] = await Promise.all([
         courses.getAll(),
-        assessments.getAll(),
         enrollments.getAll(),
       ]);
       setCourseList(allCourses);
-      setAssessmentsList(allAssessments);
       setEnrollmentsList(allEnrollments);
     } catch (err) {
       console.error("Failed to fetch courses", err);
@@ -76,17 +58,6 @@ export default function CoursesPage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    // Set underline position for active tab (index 1 - Courses)
-    if (tabRefs.current[1]) {
-      const tab = tabRefs.current[1];
-      setUnderlineStyle({
-        left: tab.offsetLeft,
-        width: tab.offsetWidth,
-      });
-    }
-  }, [user]);
 
   // Calculate pagination
   const totalPages = Math.ceil(courseList.length / itemsPerPage);
@@ -99,123 +70,32 @@ export default function CoursesPage() {
       <Sidebar />
 
       <div className="flex-1">
-        {/* Top Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-800">Learning Outcomes Portal</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-800">{user?.name || "Dr. Bara Alalwani"}</p>
-              <p className="text-xs text-gray-500">{user?.role === "instructor" ? "Faculty" : user?.role}</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-semibold">
-              {user?.name?.charAt(0) || "B"}
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-gray-200 bg-white">
-          <div className="px-6 flex gap-6 relative">
-            <button
-              ref={(el) => { tabRefs.current[0] = el; }}
-              onClick={() => router.push("/dashboard")}
-              onMouseEnter={() => handleTabHover(0)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
-            >
-              CLO Achievement
-            </button>
-            <button
-              ref={(el) => { tabRefs.current[1] = el; }}
-              onClick={() => router.push("/dashboard/courses")}
-              onMouseEnter={() => handleTabHover(1)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-            >
-              Courses <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{courseList.length}</span>
-            </button>
-            <button
-              ref={(el) => { tabRefs.current[2] = el; }}
-              onClick={() => router.push("/dashboard/assessments")}
-              onMouseEnter={() => handleTabHover(2)}
-              onMouseLeave={handleTabLeave}
-              className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-            >
-              Assessments <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">{assessmentsList.length}</span>
-            </button>
-            {user?.role === "instructor" && (
-              <button
-                ref={(el) => { tabRefs.current[3] = el; }}
-                onMouseEnter={() => handleTabHover(3)}
-                onMouseLeave={handleTabLeave}
-                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10 flex items-center gap-1"
-              >
-                Students <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">216</span>
-              </button>
-            )}
-            {user?.role === "admin" && (
-              <button
-                ref={(el) => { tabRefs.current[4] = el; }}
-                onClick={() => router.push("/dashboard/admin")}
-                onMouseEnter={() => handleTabHover(4)}
-                onMouseLeave={handleTabLeave}
-                className="py-3 font-medium text-sm text-gray-600 hover:text-gray-800 transition-colors relative z-10"
-              >
-                Admin Panel
-              </button>
-            )}
-            {/* Active underline */}
-            <div
-              className="absolute bottom-0 h-0.5 bg-indigo-600 transition-all duration-300 ease-in-out z-0"
-              style={{
-                left: `${underlineStyle.left}px`,
-                width: `${underlineStyle.width}px`,
-              }}
-            />
-            {/* Hover underline */}
-            <div
-              className="absolute bottom-0 h-0.5 bg-gray-400 transition-all duration-200 ease-in-out z-0"
-              style={{
-                left: `${hoverUnderlineStyle.left}px`,
-                width: `${hoverUnderlineStyle.width}px`,
-                opacity: hoverUnderlineStyle.opacity,
-              }}
-            />
-          </div>
-        </div>
+        <DashboardTopBar userName={user?.name} userRole={user?.role} />
+        <DashboardNavTabs userRole={user?.role || ""} />
 
         {/* Content */}
         <div className="p-6">
-          {/* Courses Header */}
-          <div className="mb-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Courses</h2>
-                <p className="text-sm text-gray-500 mt-1">Manage Courses, enrollment, and CLO mapping</p>
+          <DashboardPageHeader
+            title="Courses"
+            subtitle="Manage Courses, enrollment, and CLO mapping"
+            actions={
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-96"
+                />
+                <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64"
-                  />
-                  <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2 text-sm font-medium">
-                  <span>+</span> Add course
-                </button>
-              </div>
-            </div>
+            }
+          />
 
-            {/* Filters */}
-            <div className="flex items-center gap-4">
+          {/* Filters */}
+          <div className="flex items-center gap-4 mb-6">
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-gray-600">Term</label>
                 <select
@@ -257,7 +137,6 @@ export default function CoursesPage() {
                 </button>
               </div>
             </div>
-          </div>
 
           {/* Table */}
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
