@@ -30,7 +30,7 @@ export default function Sidebar() {
   const navItems = [
     { id: "home", label: "Home", icon: "🏠", href: "/dashboard" },
     { id: "courses", label: "Courses", icon: "📚", href: "/dashboard/courses" },
-    { id: "assessments", label: "Assessments / Result", icon: "📊", href: "/dashboard/assessments" },
+    { id: "assessments", label: "Assessments", icon: "📊", href: "/dashboard/assessments" },
     { id: "clo", label: "CLO Analysis", icon: "📈", href: "/dashboard/clo-analysis" },
     { id: "reports", label: "Reports", icon: "📋", href: "/dashboard/reports" },
     { id: "inbox", label: "Inbox", icon: "📬", href: "/dashboard/inbox" },

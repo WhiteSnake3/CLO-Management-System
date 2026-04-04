@@ -37,6 +37,10 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
     if (pathname === "/dashboard") return "dashboard";
     if (pathname.startsWith("/dashboard/courses")) return "courses";
     if (pathname.startsWith("/dashboard/assessments")) return "assessments";
+    if (pathname.startsWith("/dashboard/clo-analysis")) return "clo-analysis";
+    if (pathname.startsWith("/dashboard/reports")) return "reports";
+    if (pathname.startsWith("/dashboard/inbox")) return "inbox";
+    if (pathname.startsWith("/dashboard/settings")) return "settings";
     if (pathname.startsWith("/dashboard/admin")) return "admin";
     return "";
   };
@@ -78,7 +82,7 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
           onMouseLeave={handleTabLeave}
           className={activeKey === "dashboard" ? activeClass : inactiveClass}
         >
-          CLO Achievement
+          Dashboard
         </button>
 
         <button
@@ -105,6 +109,46 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
           <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">
             {assessmentCount}
           </span>
+        </button>
+
+        <button
+          ref={(el) => { tabRefs.current["clo-analysis"] = el; }}
+          onClick={() => router.push("/dashboard/clo-analysis")}
+          onMouseEnter={() => handleTabHover("clo-analysis")}
+          onMouseLeave={handleTabLeave}
+          className={activeKey === "clo-analysis" ? activeClass : inactiveClass}
+        >
+          CLO Analysis
+        </button>
+
+        <button
+          ref={(el) => { tabRefs.current["reports"] = el; }}
+          onClick={() => router.push("/dashboard/reports")}
+          onMouseEnter={() => handleTabHover("reports")}
+          onMouseLeave={handleTabLeave}
+          className={activeKey === "reports" ? activeClass : inactiveClass}
+        >
+          Reports
+        </button>
+
+        <button
+          ref={(el) => { tabRefs.current["inbox"] = el; }}
+          onClick={() => router.push("/dashboard/inbox")}
+          onMouseEnter={() => handleTabHover("inbox")}
+          onMouseLeave={handleTabLeave}
+          className={activeKey === "inbox" ? activeClass : inactiveClass}
+        >
+          Inbox
+        </button>
+
+        <button
+          ref={(el) => { tabRefs.current["settings"] = el; }}
+          onClick={() => router.push("/dashboard/settings")}
+          onMouseEnter={() => handleTabHover("settings")}
+          onMouseLeave={handleTabLeave}
+          className={activeKey === "settings" ? activeClass : inactiveClass}
+        >
+          Settings
         </button>
 
         {userRole === "instructor" && (
