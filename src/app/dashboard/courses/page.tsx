@@ -168,10 +168,10 @@ export default function CoursesPage() {
                   <option>All Instructors</option>
                 </select>
               </div>
-              <div className="ml-auto">
-                <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium underline">
-                  Active / Planned
-                </button>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Active</span>
+                <span className="text-gray-400">/</span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Planned</span>
               </div>
             </div>
 
