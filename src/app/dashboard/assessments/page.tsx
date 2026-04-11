@@ -134,7 +134,7 @@ function AssessmentsContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `grades_template_${gradingAssessment.assessmentId}.csv`;
+    a.download = `grades_template_${gradingAssessment.courseId}_${gradingAssessment.title.replace(/\s+/g, "_")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -174,8 +174,8 @@ function AssessmentsContent() {
         const score = parseFloat(row["grade"]) || 0;
         const cloScores = cloMappings.map((m) => {
           const rawVal = row[m.cloId.toLowerCase()] ?? row[m.cloId] ?? "";
-          const cloScore = rawVal !== "" ? parseFloat(rawVal) : score * m.weight;
-          return { cloId: m.cloId, score: cloScore, max: m.weight * totalMarks };
+          const cloScore = rawVal !== "" ? Math.round(parseFloat(rawVal) * 10) / 10 : Math.round(score * m.weight * 10) / 10;
+          return { cloId: m.cloId, score: cloScore, max: Math.round(m.weight * totalMarks * 10) / 10 };
         });
         await performances.create({
           performanceId: `PERF-${gradingAssessment.assessmentId}-${row["studentid"]}-${Date.now()}-${created}`,
@@ -239,8 +239,8 @@ function AssessmentsContent() {
         const newScore = parseFloat(editedScores[perf._id] ?? String(perf.score));
         const cloScores = cloMappings.map((m) => ({
           cloId: m.cloId,
-          score: newScore * m.weight,
-          max: m.weight * totalMarks,
+          score: Math.round(newScore * m.weight * 10) / 10,
+          max: Math.round(m.weight * totalMarks * 10) / 10,
         }));
         await performances.update(perf._id, { score: newScore, maxScore: totalMarks, cloScores });
         updated++;
@@ -728,7 +728,7 @@ function AssessmentsContent() {
         {/* Performance Modal */}
         {selectedAssessment && (
           <div className="fixed inset-0 bg-transparent backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto">
+            <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[80vh] overflow-auto">
               {/* Modal Header */}
               <div className="bg-indigo-900 text-white p-6 flex justify-between items-center sticky top-0">
                 <div>
@@ -753,40 +753,57 @@ function AssessmentsContent() {
                 ) : performanceList.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">No performances found for this assessment</div>
                 ) : (
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-b border-gray-200">
-                      <tr>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">StudentID</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Name</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Score</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Percentage</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {performanceList.map((perf) => {
-                        const maxScore = perf.maxScore || selectedAssessment.totalMarks || 100;
-                        const percentage = Math.round((perf.score / maxScore) * 100);
-                        const statusColor = percentage >= 70 ? 'bg-green-100 text-green-800' : percentage >= 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
-                        const student = studentList.find((s: any) => s.studentId === perf.studentId);
-                        const studentName = student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A';
-                        
-                        return (
-                          <tr key={perf._id} className="hover:bg-gray-50">
-                            <td className="py-3 px-4 text-sm text-gray-700 font-medium">{perf.studentId || 'N/A'}</td>
-                            <td className="py-3 px-4 text-sm text-gray-700">{studentName}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600">{perf.score}/{maxScore}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600">{percentage}%</td>
-                            <td className="py-3 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
-                                {percentage >= 70 ? 'Passed' : percentage >= 50 ? 'At Risk' : 'Failed'}
-                              </span>
-                            </td>
+                  (() => {
+                    const cloMappings: { cloId: string; weight: number }[] = selectedAssessment.cloMappings ?? [];
+                    return (
+                      <table className="w-full">
+                        <thead className="bg-gray-100 border-b border-gray-200">
+                          <tr>
+                            <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">StudentID</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Name</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Score</th>
+                            {cloMappings.map((m) => (
+                              <th key={m.cloId} className="text-left py-3 px-4 font-semibold text-sm text-gray-700">{m.cloId}</th>
+                            ))}
+                            <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Percentage</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Status</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {performanceList.map((perf) => {
+                            const maxScore = perf.maxScore || selectedAssessment.totalMarks || 100;
+                            const percentage = Math.round((perf.score / maxScore) * 100);
+                            const statusColor = percentage >= 70 ? 'bg-green-100 text-green-800' : percentage >= 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+                            const student = studentList.find((s: any) => s.studentId === perf.studentId);
+                            const studentName = student ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : 'N/A';
+                            const cloScoresMap: Record<string, { score: number; max: number }> = {};
+                            (perf.cloScores ?? []).forEach((cs: any) => { cloScoresMap[cs.cloId] = { score: cs.score, max: cs.max }; });
+                            return (
+                              <tr key={perf._id} className="hover:bg-gray-50">
+                                <td className="py-3 px-4 text-sm text-gray-700 font-medium">{perf.studentId || 'N/A'}</td>
+                                <td className="py-3 px-4 text-sm text-gray-700">{studentName}</td>
+                                <td className="py-3 px-4 text-sm text-gray-600">{perf.score}/{maxScore}</td>
+                                {cloMappings.map((m) => {
+                                  const cs = cloScoresMap[m.cloId];
+                                  return (
+                                    <td key={m.cloId} className="py-3 px-4 text-sm text-gray-500 italic">
+                                      {cs ? `${cs.score}/${cs.max}` : '—'}
+                                    </td>
+                                  );
+                                })}
+                                <td className="py-3 px-4 text-sm text-gray-600">{percentage}%</td>
+                                <td className="py-3 px-4">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}>
+                                    {percentage >= 70 ? 'Passed' : percentage >= 50 ? 'At Risk' : 'Failed'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    );
+                  })()
                 )}
               </div>
 

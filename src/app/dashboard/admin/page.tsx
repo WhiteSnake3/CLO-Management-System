@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DashboardTopBar from "@/components/DashboardTopBar";
 import DashboardNavTabs from "@/components/DashboardNavTabs";
-import { students, instructors, courses, users, assessments, enrollments, backup, transactionLogs, getUserFromToken } from "@/lib/api";
+import { students, instructors, courses, users, assessments, enrollments, performances, backup, transactionLogs, getUserFromToken } from "@/lib/api";
 
 function AdminPanelContent() {
   const router = useRouter();
@@ -18,6 +18,7 @@ function AdminPanelContent() {
   const [instructorsList, setInstructorsList] = useState<any[]>([]);
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [assessmentsList, setAssessmentsList] = useState<any[]>([]);
+  const [performancesList, setPerformancesList] = useState<any[]>([]);
   const [enrollmentsList, setEnrollmentsList] = useState<any[]>([]);
 
   // Backup states
@@ -59,12 +60,13 @@ function AdminPanelContent() {
 
   const fetchAllData = async () => {
     try {
-      const [studentsData, usersData, instructorsData, coursesData, assessmentsData, enrollmentsData] = await Promise.all([
+      const [studentsData, usersData, instructorsData, coursesData, assessmentsData, performancesData, enrollmentsData] = await Promise.all([
         students.getAll(),
         users.getAll(),
         instructors.getAll(),
         courses.getAll(),
         assessments.getAll(),
+        performances.getAll(),
         enrollments.getAll(),
       ]);
       setStudentsList(studentsData);
@@ -72,6 +74,7 @@ function AdminPanelContent() {
       setInstructorsList(instructorsData);
       setCoursesList(coursesData);
       setAssessmentsList(assessmentsData);
+      setPerformancesList(performancesData);
       setEnrollmentsList(enrollmentsData);
     } catch (err) {
       console.error("Failed to fetch data", err);
@@ -202,6 +205,8 @@ function AdminPanelContent() {
         return courses.create(data);
       case "assessments":
         return assessments.create(data);
+      case "performances":
+        return performances.create(data);
       case "enrollments":
         return enrollments.create(data);
     }
@@ -219,6 +224,8 @@ function AdminPanelContent() {
         return courses.update(id, data);
       case "assessments":
         return assessments.update(id, data);
+      case "performances":
+        return performances.update(id, data);
       case "enrollments":
         return enrollments.update(id, data);
     }
@@ -236,6 +243,8 @@ function AdminPanelContent() {
         return courses.delete(id);
       case "assessments":
         return assessments.delete(id);
+      case "performances":
+        return performances.delete(id);
       case "enrollments":
         return enrollments.delete(id);
     }
@@ -414,6 +423,8 @@ function AdminPanelContent() {
         return ["courseId", "title", "department", "term"];
       case "assessments":
         return ["assessmentId", "courseId", "title", "type", "dueDate", "totalMarks"];
+      case "performances":
+        return ["performanceId", "studentId", "assessmentId", "courseId", "score", "maxScore"];
       case "enrollments":
         return ["enrollmentId", "studentId", "courseId", "term", "status"];
     }
@@ -431,6 +442,8 @@ function AdminPanelContent() {
         return ["courseId", "title", "department", "term", "instructorId"];
       case "assessments":
         return ["assessmentId", "courseId", "title", "type", "dueDate", "totalMarks"];
+      case "performances":
+        return ["performanceId", "studentId", "assessmentId", "courseId", "score", "maxScore", "gradedBy"];
       case "enrollments":
         return ["enrollmentId", "studentId", "courseId", "term", "status"];
     }
@@ -448,6 +461,8 @@ function AdminPanelContent() {
         return coursesList;
       case "assessments":
         return assessmentsList;
+      case "performances":
+        return performancesList;
       case "enrollments":
         return enrollmentsList;
     }
@@ -470,7 +485,7 @@ function AdminPanelContent() {
 
         {/* Tabs */}
         <div className="border-b border-slate-200 bg-white">
-          <div className="px-6 flex gap-8">{["students", "users", "instructors", "courses", "assessments", "enrollments", "mass-enrollment", "backup"].map((tab) => (
+          <div className="px-6 flex gap-8">{["students", "users", "instructors", "courses", "assessments", "performances", "enrollments", "mass-enrollment", "backup"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -609,7 +624,7 @@ function AdminPanelContent() {
                         onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
-                    ) : field === "totalMarks" ? (
+                    ) : field === "totalMarks" || field === "score" || field === "maxScore" ? (
                       <input
                         type="number"
                         value={formData[field] || ""}
