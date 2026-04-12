@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DashboardTopBar from "@/components/DashboardTopBar";
 import DashboardNavTabs from "@/components/DashboardNavTabs";
-import { students, instructors, courses, users, assessments, enrollments, performances, backup, transactionLogs, getUserFromToken } from "@/lib/api";
+import { students, instructors, courses, users, assessments, enrollments, performances, backup, transactionLogs, syllabus, getUserFromToken } from "@/lib/api";
 
 function AdminPanelContent() {
   const router = useRouter();
@@ -30,6 +30,17 @@ function AdminPanelContent() {
   const [massEnrollLoading, setMassEnrollLoading] = useState(false);
   const [massEnrollResult, setMassEnrollResult] = useState<any>(null);
   const massEnrollFileRef = useRef<HTMLInputElement>(null);
+
+  // Syllabus import states
+  const syllabusFileRef = useRef<HTMLInputElement>(null);
+  const [syllabusFile, setSyllabusFile] = useState<File | null>(null);
+  const [syllabusLoading, setSyllabusLoading] = useState(false);
+  const [syllabusEdits, setSyllabusEdits] = useState<any>(null);
+  const [syllabusError, setSyllabusError] = useState<string | null>(null);
+  const [syllabusInstructorId, setSyllabusInstructorId] = useState("");
+  const [syllabusImporting, setSyllabusImporting] = useState(false);
+  const [syllabusImportResult, setSyllabusImportResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [syllabusDragOver, setSyllabusDragOver] = useState(false);
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -411,6 +422,73 @@ function AdminPanelContent() {
     }
   };
 
+  const handleSyllabusFile = async (file: File) => {
+    if (!file.name.endsWith(".pdf") && file.type !== "application/pdf") {
+      setSyllabusError("Please upload a PDF file.");
+      return;
+    }
+    setSyllabusFile(file);
+    setSyllabusError(null);
+    setSyllabusEdits(null);
+    setSyllabusImportResult(null);
+    setSyllabusLoading(true);
+    try {
+      const result = await syllabus.parse(file);
+      setSyllabusEdits(result);
+      // Pre-select instructor if name matches
+      const match = instructorsList.find(
+        (i: any) => i.name?.toLowerCase() === result.instructorName?.toLowerCase()
+      );
+      setSyllabusInstructorId(match?.instructorId ?? "");
+    } catch (err: any) {
+      setSyllabusError(err.message ?? "Failed to parse syllabus.");
+    } finally {
+      setSyllabusLoading(false);
+    }
+  };
+
+  const handleSyllabusImport = async () => {
+    if (!syllabusEdits) return;
+    setSyllabusImporting(true);
+    setSyllabusImportResult(null);
+    try {
+      const coursePayload = {
+        courseId: syllabusEdits.courseId,
+        title: syllabusEdits.title,
+        department: syllabusEdits.department,
+        term: syllabusEdits.term,
+        instructorId: syllabusInstructorId,
+        CLOs: syllabusEdits.CLOs ?? [],
+      };
+      await courses.create(coursePayload);
+      let aCount = 0;
+      for (let i = 0; i < (syllabusEdits.assessments ?? []).length; i++) {
+        const a = syllabusEdits.assessments[i];
+        const cloIds: string[] = a.cloIds ?? [];
+        const weight = cloIds.length > 0 ? Math.round((1 / cloIds.length) * 100) / 100 : 0;
+        await assessments.create({
+          assessmentId: `A-${syllabusEdits.courseId}-${i + 1}-${Date.now()}`,
+          courseId: syllabusEdits.courseId,
+          title: a.title,
+          type: a.type,
+          totalMarks: a.totalMarks,
+          cloMappings: cloIds.map((id: string) => ({ cloId: id, weight })),
+          status: "pending",
+        });
+        aCount++;
+      }
+      setSyllabusImportResult({
+        success: true,
+        message: `Course "${syllabusEdits.title}" imported with ${(syllabusEdits.CLOs ?? []).length} CLOs and ${aCount} assessments.`,
+      });
+      fetchAllData();
+    } catch (err: any) {
+      setSyllabusImportResult({ success: false, message: err.message ?? "Import failed." });
+    } finally {
+      setSyllabusImporting(false);
+    }
+  };
+
   const getTableColumns = () => {
     switch (activeTab) {
       case "students":
@@ -485,7 +563,7 @@ function AdminPanelContent() {
 
         {/* Tabs */}
         <div className="border-b border-slate-200 bg-white">
-          <div className="px-6 flex gap-8">{["students", "users", "instructors", "courses", "assessments", "performances", "enrollments", "mass-enrollment", "backup"].map((tab) => (
+          <div className="px-6 flex gap-8">{["students", "users", "instructors", "courses", "assessments", "performances", "enrollments", "mass-enrollment", "syllabus-import", "backup"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -495,7 +573,7 @@ function AdminPanelContent() {
                     : "border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300"
                 }`}
               >
-                {tab === "mass-enrollment" ? "Mass Enrollment" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "mass-enrollment" ? "Mass Enrollment" : tab === "syllabus-import" ? "Syllabus Import" : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -571,8 +649,293 @@ function AdminPanelContent() {
             </div>
           )}
 
+          {/* Syllabus Import Section */}
+          {activeTab === "syllabus-import" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-lg p-6">
+                <h3 className="font-bold text-lg text-slate-800 mb-1">Syllabus Import</h3>
+                <p className="text-sm text-slate-500 mb-6">Upload a PDF syllabus to automatically extract the course, CLOs, and assessments. Review and edit before importing.</p>
+
+                {/* Upload Zone */}
+                <div
+                  className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors mb-4 ${
+                    syllabusDragOver ? "border-indigo-400 bg-indigo-50" : "border-slate-300 hover:border-indigo-300 cursor-pointer"
+                  }`}
+                  onClick={() => syllabusFileRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setSyllabusDragOver(true); }}
+                  onDragLeave={() => setSyllabusDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setSyllabusDragOver(false);
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleSyllabusFile(file);
+                  }}
+                >
+                  {syllabusFile ? (
+                    <p className="text-sm text-indigo-700 font-medium">📄 {syllabusFile.name}</p>
+                  ) : (
+                    <p className="text-sm text-slate-500">Drag & drop a PDF here, or click to browse</p>
+                  )}
+                </div>
+                <input
+                  ref={syllabusFileRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleSyllabusFile(file);
+                    e.target.value = "";
+                  }}
+                />
+
+                {syllabusLoading && (
+                  <div className="text-center py-8 text-indigo-600 font-medium">⏳ Parsing syllabus with AI...</div>
+                )}
+
+                {syllabusError && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">✗ {syllabusError}</div>
+                )}
+
+                {/* Review Panel */}
+                {syllabusEdits && !syllabusLoading && (
+                  <div className="mt-6 space-y-6">
+
+                    {/* Instructor warning */}
+                    {!instructorsList.find((i: any) => i.instructorId === syllabusInstructorId) && (
+                      <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg">
+                        <p className="text-sm font-semibold text-amber-800 mb-2">
+                          ⚠️ Instructor &quot;{syllabusEdits.instructorName}&quot; not found in the system. Select an existing instructor:
+                        </p>
+                        <select
+                          value={syllabusInstructorId}
+                          onChange={(e) => setSyllabusInstructorId(e.target.value)}
+                          className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        >
+                          <option value="">— Leave unassigned —</option>
+                          {instructorsList.map((i: any) => (
+                            <option key={i.instructorId} value={i.instructorId}>{i.name} ({i.instructorId})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Course Info */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-slate-800 mb-3">Course Details</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        {(["courseId", "title", "department", "term"] as const).map((field) => (
+                          <div key={field}>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+                            <input
+                              type="text"
+                              value={syllabusEdits[field] ?? ""}
+                              onChange={(e) => setSyllabusEdits({ ...syllabusEdits, [field]: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* CLOs Table */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-semibold text-slate-800">Course Learning Outcomes ({(syllabusEdits.CLOs ?? []).length})</h4>
+                        <button
+                          type="button"
+                          onClick={() => setSyllabusEdits({ ...syllabusEdits, CLOs: [...(syllabusEdits.CLOs ?? []), { cloId: "", description: "" }] })}
+                          className="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded font-medium"
+                        >
+                          + Add CLO
+                        </button>
+                      </div>
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-200">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-semibold text-slate-700 w-24">CLO ID</th>
+                            <th className="text-left px-3 py-2 font-semibold text-slate-700">Description</th>
+                            <th className="w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {(syllabusEdits.CLOs ?? []).map((clo: any, idx: number) => (
+                            <tr key={idx} className="bg-white">
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={clo.cloId}
+                                  onChange={(e) => {
+                                    const updated = [...syllabusEdits.CLOs];
+                                    updated[idx] = { ...updated[idx], cloId: e.target.value };
+                                    setSyllabusEdits({ ...syllabusEdits, CLOs: updated });
+                                  }}
+                                  className="w-full px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={clo.description}
+                                  onChange={(e) => {
+                                    const updated = [...syllabusEdits.CLOs];
+                                    updated[idx] = { ...updated[idx], description: e.target.value };
+                                    setSyllabusEdits({ ...syllabusEdits, CLOs: updated });
+                                  }}
+                                  className="w-full px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                />
+                              </td>
+                              <td className="px-2 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = syllabusEdits.CLOs.filter((_: any, i: number) => i !== idx);
+                                    setSyllabusEdits({ ...syllabusEdits, CLOs: updated });
+                                  }}
+                                  className="text-red-400 hover:text-red-600 text-lg leading-none"
+                                >
+                                  ×
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Assessments Table */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-semibold text-slate-800">Assessments ({(syllabusEdits.assessments ?? []).length})</h4>
+                        <button
+                          type="button"
+                          onClick={() => setSyllabusEdits({ ...syllabusEdits, assessments: [...(syllabusEdits.assessments ?? []), { title: "", type: "other", totalMarks: 0, cloIds: [] }] })}
+                          className="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded font-medium"
+                        >
+                          + Add Assessment
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-200">
+                            <tr>
+                              <th className="text-left px-3 py-2 font-semibold text-slate-700">Title</th>
+                              <th className="text-left px-3 py-2 font-semibold text-slate-700 w-32">Type</th>
+                              <th className="text-left px-3 py-2 font-semibold text-slate-700 w-24">Marks</th>
+                              <th className="text-left px-3 py-2 font-semibold text-slate-700">CLOs Mapped</th>
+                              <th className="w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200">
+                            {(syllabusEdits.assessments ?? []).map((a: any, idx: number) => (
+                              <tr key={idx} className="bg-white">
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="text"
+                                    value={a.title}
+                                    onChange={(e) => {
+                                      const updated = [...syllabusEdits.assessments];
+                                      updated[idx] = { ...updated[idx], title: e.target.value };
+                                      setSyllabusEdits({ ...syllabusEdits, assessments: updated });
+                                    }}
+                                    className="w-full px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <select
+                                    value={a.type}
+                                    onChange={(e) => {
+                                      const updated = [...syllabusEdits.assessments];
+                                      updated[idx] = { ...updated[idx], type: e.target.value };
+                                      setSyllabusEdits({ ...syllabusEdits, assessments: updated });
+                                    }}
+                                    className="w-full px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                  >
+                                    {["assignment", "test", "exam", "project", "quiz", "other"].map((t) => (
+                                      <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    value={a.totalMarks}
+                                    onChange={(e) => {
+                                      const updated = [...syllabusEdits.assessments];
+                                      updated[idx] = { ...updated[idx], totalMarks: parseFloat(e.target.value) || 0 };
+                                      setSyllabusEdits({ ...syllabusEdits, assessments: updated });
+                                    }}
+                                    className="w-full px-2 py-1 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <div className="flex flex-wrap gap-2">
+                                    {(syllabusEdits.CLOs ?? []).map((clo: any) => (
+                                      <label key={clo.cloId} className="flex items-center gap-1 text-xs">
+                                        <input
+                                          type="checkbox"
+                                          checked={(a.cloIds ?? []).includes(clo.cloId)}
+                                          onChange={(e) => {
+                                            const updated = [...syllabusEdits.assessments];
+                                            const current: string[] = updated[idx].cloIds ?? [];
+                                            updated[idx] = {
+                                              ...updated[idx],
+                                              cloIds: e.target.checked
+                                                ? [...current, clo.cloId]
+                                                : current.filter((id: string) => id !== clo.cloId),
+                                            };
+                                            setSyllabusEdits({ ...syllabusEdits, assessments: updated });
+                                          }}
+                                        />
+                                        {clo.cloId}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-2 py-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = syllabusEdits.assessments.filter((_: any, i: number) => i !== idx);
+                                      setSyllabusEdits({ ...syllabusEdits, assessments: updated });
+                                    }}
+                                    className="text-red-400 hover:text-red-600 text-lg leading-none"
+                                  >
+                                    ×
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Import Result */}
+                    {syllabusImportResult && (
+                      <div className={`p-4 rounded-lg border text-sm font-medium ${syllabusImportResult.success ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700"}`}>
+                        {syllabusImportResult.success ? "✓" : "✗"} {syllabusImportResult.message}
+                      </div>
+                    )}
+
+                    {/* Import Button */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleSyllabusImport}
+                        disabled={syllabusImporting || !!syllabusImportResult?.success}
+                        className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {syllabusImporting ? "Importing..." : "⬆ Import Course"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Add New Button */}
-          {activeTab !== "backup" && activeTab !== "mass-enrollment" && !showForm && (
+          {activeTab !== "backup" && activeTab !== "mass-enrollment" && activeTab !== "syllabus-import" && !showForm && (
             <div className="mb-6">
               <button
                 onClick={handleAdd}
@@ -584,7 +947,7 @@ function AdminPanelContent() {
           )}
 
           {/* Add/Edit Form */}
-          {activeTab !== "mass-enrollment" && showForm && (
+          {activeTab !== "mass-enrollment" && activeTab !== "syllabus-import" && showForm && (
             <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
               <h3 className="font-bold text-lg text-slate-800 mb-4">
                 {editingId ? "Edit" : "Add New"} {activeTab.slice(0, -1)}
@@ -837,7 +1200,7 @@ function AdminPanelContent() {
           )}
 
           {/* Table */}
-          {activeTab !== "backup" && activeTab !== "mass-enrollment" && (
+          {activeTab !== "backup" && activeTab !== "mass-enrollment" && activeTab !== "syllabus-import" && (
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">

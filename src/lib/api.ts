@@ -136,10 +136,29 @@ export const analytics = {
 };
 
 // Backup endpoints
-export const backup = {
-  createBackup: () => apiCall("/backup/backup", { method: "POST" }),
+export const backup = {  createBackup: () => apiCall("/backup/backup", { method: "POST" }),
   listBackups: () => apiCall("/backup/backups"),
   restore: (backupName: string) => apiCall(`/backup/restore/${backupName}`, { method: "POST" }),
+};
+
+// Syllabus import endpoint (multipart — cannot use apiCall)
+export const syllabus = {
+  parse: (file: File): Promise<any> => {
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("pdf", file);
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL}/syllabus/parse`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `API error: ${res.statusText}`);
+      }
+      return res.json();
+    });
+  },
 };
 
 // Utility: Decode JWT to get user info
