@@ -133,6 +133,17 @@ export const transactionLogs = {
 export const analytics = {
   getCLOAchievement: (courseId?: string) =>
     apiCall(`/analytics${courseId ? `?courseId=${courseId}` : ""}`),
+  calculate: (config: {
+    mode: "single" | "group";
+    studentId?: string;
+    groupFilter?: { type: "all" | "program" | "year"; value: string };
+    courseIds: "all" | string[];
+    term?: string;
+    metric: "clo" | "grade";
+    target: number;
+    atRisk: number;
+  }) =>
+    apiCall("/analytics/calculate", { method: "POST", body: JSON.stringify(config) }),
 };
 
 // Backup endpoints
