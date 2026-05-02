@@ -133,6 +133,7 @@ export const transactionLogs = {
 export const analytics = {
   getCLOAchievement: (courseId?: string) =>
     apiCall(`/analytics${courseId ? `?courseId=${courseId}` : ""}`),
+  getAll: () => apiCall("/analytics"),
   calculate: (config: {
     mode: "single" | "group";
     studentId?: string;
@@ -160,6 +161,24 @@ export const analytics = {
 export const backup = {  createBackup: () => apiCall("/backup/backup", { method: "POST" }),
   listBackups: () => apiCall("/backup/backups"),
   restore: (backupName: string) => apiCall(`/backup/restore/${backupName}`, { method: "POST" }),
+};
+
+// Reports endpoints
+export const reports = {
+  getAll: () => apiCall("/reports"),
+  getById: (id: string) => apiCall(`/reports/${id}`),
+  delete: (id: string) => apiCall(`/reports/${id}`, { method: "DELETE" }),
+  generate: (data: { snapshotId: string; title?: string }) =>
+    apiCall("/reports/generate", { method: "POST", body: JSON.stringify(data) }),
+  save: (data: {
+    snapshotId: string;
+    title: string;
+    content: string;
+    metric?: string;
+    term?: string;
+    courseIds?: string[];
+    meta?: object;
+  }) => apiCall("/reports/save", { method: "POST", body: JSON.stringify(data) }),
 };
 
 // Syllabus import endpoint (multipart — cannot use apiCall)
