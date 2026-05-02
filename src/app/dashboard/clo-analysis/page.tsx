@@ -534,6 +534,9 @@ export default function CLOAnalysisPage() {
   const [calculating, setCalculating] = useState(false);
   const [calcError, setCalcError] = useState<string | null>(null);
 
+  const [saving, setSaving] = useState(false);
+  const [savedModalOpen, setSavedModalOpen] = useState(false);
+
   const [studentsList, setStudentsList] = useState<StudentRecord[]>([]);
   const [coursesList, setCoursesList] = useState<CourseRecord[]>([]);
 
@@ -612,6 +615,33 @@ export default function CLOAnalysisPage() {
     return map;
   }, [results, config.mode]);
 
+  const handleSave = async () => {
+    if (!results) return;
+    setSaving(true);
+    try {
+      const resolvedCourseIds =
+        config.courseSelection === "all"
+          ? [...new Set(results.results.map((r) => r.courseId))]
+          : config.selectedCourseIds;
+      await analytics.save({
+        metric: results.metric,
+        target: results.target,
+        atRisk: results.atRisk,
+        config: {
+          ...(config as unknown as object),
+          selectedCourseIds: resolvedCourseIds,
+        },
+        meta: results.meta,
+        results: results.results,
+      });
+      setSavedModalOpen(true);
+    } catch (err: unknown) {
+      setCalcError(err instanceof Error ? err.message : "Failed to save analysis");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (pageLoading)
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -632,12 +662,23 @@ export default function CLOAnalysisPage() {
             title="CLO Analysis"
             subtitle="Data-driven CLO achievement by population, course, and term"
             actions={
-              <button
-                onClick={() => setSettingsOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-              >
-                <span>⚙</span> Analysis settings
-              </button>
+              <div className="flex items-center gap-3">
+                {results && (
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>💾</span> {saving ? "Saving…" : "Save Analysis"}
+                  </button>
+                )}
+                <button
+                  onClick={() => setSettingsOpen(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                >
+                  <span>⚙</span> Analysis settings
+                </button>
+              </div>
             }
           />
 
@@ -935,6 +976,35 @@ export default function CLOAnalysisPage() {
         coursesList={coursesList}
         calculating={calculating}
       />
+
+      {/* Save success modal */}
+      {savedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-4 text-3xl">
+              ✅
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Analysis saved!</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Your analysis has been saved successfully. Would you like to generate a report based on this analysis?
+            </p>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setSavedModalOpen(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => router.push("/dashboard/reports")}
+                className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+              >
+                Generate Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -144,6 +144,16 @@ export const analytics = {
     atRisk: number;
   }) =>
     apiCall("/analytics/calculate", { method: "POST", body: JSON.stringify(config) }),
+  save: (payload: {
+    label?: string;
+    metric: string;
+    target: number;
+    atRisk: number;
+    config: object;
+    meta: object;
+    results: object[];
+  }) =>
+    apiCall("/analytics/save", { method: "POST", body: JSON.stringify(payload) }),
 };
 
 // Backup endpoints
