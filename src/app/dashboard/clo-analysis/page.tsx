@@ -536,6 +536,8 @@ export default function CLOAnalysisPage() {
 
   const [saving, setSaving] = useState(false);
   const [savedModalOpen, setSavedModalOpen] = useState(false);
+  const [saveNamingOpen, setSaveNamingOpen] = useState(false);
+  const [saveLabel, setSaveLabel] = useState("");
 
   const [studentsList, setStudentsList] = useState<StudentRecord[]>([]);
   const [coursesList, setCoursesList] = useState<CourseRecord[]>([]);
@@ -615,8 +617,9 @@ export default function CLOAnalysisPage() {
     return map;
   }, [results, config.mode]);
 
-  const handleSave = async () => {
+  const handleSave = async (label: string) => {
     if (!results) return;
+    setSaveNamingOpen(false);
     setSaving(true);
     try {
       const resolvedCourseIds =
@@ -624,6 +627,7 @@ export default function CLOAnalysisPage() {
           ? [...new Set(results.results.map((r) => r.courseId))]
           : config.selectedCourseIds;
       await analytics.save({
+        label: label.trim() || undefined,
         metric: results.metric,
         target: results.target,
         atRisk: results.atRisk,
@@ -634,6 +638,7 @@ export default function CLOAnalysisPage() {
         meta: results.meta,
         results: results.results,
       });
+      setSaveLabel("");
       setSavedModalOpen(true);
     } catch (err: unknown) {
       setCalcError(err instanceof Error ? err.message : "Failed to save analysis");
@@ -665,7 +670,7 @@ export default function CLOAnalysisPage() {
               <div className="flex items-center gap-3">
                 {results && (
                   <button
-                    onClick={handleSave}
+                    onClick={() => { setSaveLabel(""); setSaveNamingOpen(true); }}
                     disabled={saving}
                     className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -976,6 +981,40 @@ export default function CLOAnalysisPage() {
         coursesList={coursesList}
         calculating={calculating}
       />
+
+      {/* Save naming modal */}
+      {saveNamingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Save Analysis</h2>
+            <p className="text-sm text-gray-500 mb-4">Optionally give this analysis a name before saving.</p>
+            <input
+              type="text"
+              value={saveLabel}
+              onChange={(e) => setSaveLabel(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSave(saveLabel); }}
+              placeholder="e.g. Fall 2026 – CLO Review"
+              maxLength={80}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-5"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSaveNamingOpen(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSave(saveLabel)}
+                className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save success modal */}
       {savedModalOpen && (
