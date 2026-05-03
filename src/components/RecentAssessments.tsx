@@ -1,39 +1,49 @@
 "use client";
 
-export default function RecentAssessments() {
-  const assessments = [
-    { id: 1, name: "Midterm Exam", course: "COSC101", date: "Dec 15", clos: ["CLO1", "CLO2", "CLO4", "CLO5"] },
-    { id: 2, name: "Quiz 3", course: "COSC133", date: "Dec 10", clos: ["CLO3", "CLO5"] },
-    { id: 3, name: "Project 1", course: "COSC191", date: "Dec 08", clos: ["CLO1", "CLO2", "CLO3"] },
-    { id: 4, name: "Lab 4", course: "CMPE160", date: "Dec 05", clos: ["CLO2", "CLO4"] },
-    { id: 5, name: "Final Assignment", course: "CMPE490", date: "Dec 01", clos: ["CLO1", "CLO5"] },
-  ];
+interface RecentAssessment {
+  id: string;
+  title: string;
+  courseId: string;
+  date: string;
+  cloIds: string[];
+}
+
+export default function RecentAssessments({ items }: { items: RecentAssessment[] }) {
+  if (items.length === 0) {
+    return (
+      <div className="bg-white p-6 rounded-lg border border-slate-200 flex items-center justify-center min-h-[200px]">
+        <p className="text-slate-500 text-sm">No graded assessments yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-lg border border-slate-200">
-      <h3 className="text-lg font-bold text-slate-800 mb-4">Recent Assessments</h3>
-      <p className="text-xs text-slate-500 mb-4">Most recent 5 across your courses</p>
+      <h3 className="text-base font-bold text-slate-800 mb-1">Recent Assessments</h3>
+      <p className="text-xs text-slate-500 mb-4">5 most recently graded</p>
 
       <div className="space-y-3">
-        {assessments.map((assessment) => (
-          <div key={assessment.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
-            <div className="flex justify-between items-start mb-2">
+        {items.map((a) => (
+          <div key={a.id} className="border border-slate-200 rounded-lg p-3 hover:shadow-sm transition">
+            <div className="flex justify-between items-start mb-1.5">
               <div>
-                <p className="font-semibold text-slate-800">{assessment.name}</p>
-                <p className="text-xs text-slate-500">{assessment.course}</p>
+                <p className="font-semibold text-slate-800 text-sm">{a.title}</p>
+                <p className="text-xs text-slate-500">{a.courseId}</p>
               </div>
-              <p className="text-xs text-slate-500">{assessment.date}</p>
+              <p className="text-xs text-slate-500 shrink-0">{a.date}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {assessment.clos.map((clo) => (
-                <span
-                  key={clo}
-                  className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full"
-                >
-                  {clo}
-                </span>
-              ))}
-            </div>
+            {a.cloIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {a.cloIds.map((clo) => (
+                  <span
+                    key={clo}
+                    className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full"
+                  >
+                    {clo}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
