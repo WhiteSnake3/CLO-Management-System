@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { courses, assessments } from "@/lib/api";
+import { courses, assessments, enrollments as enrollmentsApi } from "@/lib/api";
 
 interface DashboardNavTabsProps {
   userRole: string;
@@ -13,9 +13,21 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
   const pathname = usePathname();
   const [courseCount, setCourseCount] = useState(0);
   const [assessmentCount, setAssessmentCount] = useState(0);
+  const [studentCount, setStudentCount] = useState(0);
+  const [instructorUserId, setInstructorUserId] = useState<string | null>(null);
   const [underlineStyle, setUnderlineStyle] = useState({ left: 0, width: 0 });
   const [hoverUnderlineStyle, setHoverUnderlineStyle] = useState({ left: 0, width: 0, opacity: 0 });
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const p = JSON.parse(atob(token.split(".")[1]));
+        if (p.role === "instructor") setInstructorUserId(p.userId ?? null);
+      } catch { /* ignore */ }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -33,12 +45,33 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
     fetchCounts();
   }, []);
 
+  useEffect(() => {
+    if (!instructorUserId) return;
+    const fetchStudentCount = async () => {
+      try {
+        const [allCourses, allEnrollments] = await Promise.all([
+          courses.getAll() as Promise<{ courseId: string; instructorId: string }[]>,
+          enrollmentsApi.getAll() as Promise<{ courseId: string; studentId: string; status: string }[]>,
+        ]);
+        const myCourseIds = new Set(
+          (allCourses ?? []).filter((c) => c.instructorId === instructorUserId).map((c) => c.courseId)
+        );
+        const myStudents = new Set(
+          (allEnrollments ?? []).filter((e) => myCourseIds.has(e.courseId) && e.status === "active").map((e) => e.studentId)
+        );
+        setStudentCount(myStudents.size);
+      } catch { /* ignore */ }
+    };
+    fetchStudentCount();
+  }, [instructorUserId]);
+
   const getActiveKey = (): string => {
     if (pathname === "/dashboard") return "dashboard";
     if (pathname.startsWith("/dashboard/courses")) return "courses";
     if (pathname.startsWith("/dashboard/assessments")) return "assessments";
     if (pathname.startsWith("/dashboard/clo-analysis")) return "clo-analysis";
     if (pathname.startsWith("/dashboard/reports")) return "reports";
+    if (pathname.startsWith("/dashboard/students")) return "students";
     if (pathname.startsWith("/dashboard/inbox")) return "inbox";
     if (pathname.startsWith("/dashboard/settings")) return "settings";
     if (pathname.startsWith("/dashboard/admin")) return "admin";
@@ -114,13 +147,14 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
         {userRole === "instructor" && (
           <button
             ref={(el) => { tabRefs.current["students"] = el; }}
+            onClick={() => router.push("/dashboard/students")}
             onMouseEnter={() => handleTabHover("students")}
             onMouseLeave={handleTabLeave}
-            className={`${inactiveClass} flex items-center gap-1`}
+            className={`${activeKey === "students" ? activeClass : inactiveClass} flex items-center gap-1`}
           >
             Students{" "}
             <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">
-              216
+              {studentCount}
             </span>
           </button>
         )}
