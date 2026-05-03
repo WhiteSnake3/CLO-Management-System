@@ -6,7 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import DashboardTopBar from "@/components/DashboardTopBar";
 import DashboardNavTabs from "@/components/DashboardNavTabs";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
-import { reports as reportsApi, analytics } from "@/lib/api";
+import { reports as reportsApi, analytics, users as usersApi, inbox as inboxApi } from "@/lib/api";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -266,6 +266,144 @@ function GenerateReportModal({
   );
 }
 
+// ── Post Report Modal ──────────────────────────────────────────────────────
+
+interface SystemUser {
+  _id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+function PostReportModal({
+  report,
+  currentUserId,
+  onClose,
+  onPosted,
+}: {
+  report: Report;
+  currentUserId: string;
+  onClose: () => void;
+  onPosted: () => void;
+}) {
+  const [allUsers, setAllUsers] = useState<SystemUser[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    usersApi.getAll().then((u: SystemUser[]) => {
+      setAllUsers(u || []);
+    }).catch(() => {
+      setError("Failed to load users");
+    }).finally(() => setLoadingUsers(false));
+  }, []);
+
+  const toggle = (userId: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const handlePost = async () => {
+    if (selected.size === 0) return;
+    setPosting(true);
+    setError(null);
+    try {
+      await inboxApi.post({
+        reportId: report._id,
+        recipientUserIds: Array.from(selected),
+      });
+      onPosted();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to post report");
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const otherUsers = allUsers.filter((u) => u.userId !== currentUserId);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Post Report</h2>
+            <p className="text-sm text-gray-500 mt-0.5 truncate max-w-xs">{report.title}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          <p className="text-sm text-gray-600 mb-3">
+            Select recipients. The report will also be sent to your own inbox.
+          </p>
+          {loadingUsers ? (
+            <div className="flex justify-center py-8">
+              <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : otherUsers.length === 0 ? (
+            <p className="text-sm text-gray-500 italic text-center py-6">No other users found.</p>
+          ) : (
+            <div className="space-y-2">
+              {otherUsers.map((u) => (
+                <label
+                  key={u.userId}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selected.has(u.userId)
+                      ? "border-indigo-500 bg-indigo-50"
+                      : "border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.has(u.userId)}
+                    onChange={() => toggle(u.userId)}
+                    className="accent-indigo-600"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{u.name}</p>
+                    <p className="text-xs text-gray-500">{u.email} · {u.role}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handlePost}
+            disabled={selected.size === 0 || posting}
+            className="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {posting ? "Posting…" : `Post to ${selected.size > 0 ? selected.size : ""} recipient${selected.size !== 1 ? "s" : ""}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── View Report Modal ──────────────────────────────────────────────────────
 
 function ViewReportModal({ report, onClose }: { report: Report; onClose: () => void }) {
@@ -302,7 +440,7 @@ function ViewReportModal({ report, onClose }: { report: Report; onClose: () => v
 
 export default function ReportsPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; userId: string } | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
 
   const [allReports, setAllReports] = useState<Report[]>([]);
@@ -314,6 +452,8 @@ export default function ReportsPage() {
 
   const [generateOpen, setGenerateOpen] = useState(false);
   const [viewReport, setViewReport] = useState<Report | null>(null);
+  const [postingReport, setPostingReport] = useState<Report | null>(null);
+  const [postSuccess, setPostSuccess] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -491,13 +631,11 @@ export default function ReportsPage() {
                         PDF
                       </button>
                       <button
-                        disabled
-                        title="Inbox feature coming soon"
-                        className="px-3 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-gray-400 text-xs font-medium cursor-not-allowed"
+                        onClick={() => setPostingReport(report)}
+                        className="px-3 py-1.5 rounded-md border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 text-xs font-medium"
                       >
                         Post
-                      </button>
-                    </div>
+                      </button>                    </div>
                   </div>
                 ))}
               </div>
@@ -519,6 +657,25 @@ export default function ReportsPage() {
 
       {viewReport && (
         <ViewReportModal report={viewReport} onClose={() => setViewReport(null)} />
+      )}
+
+      {postingReport && user && (
+        <PostReportModal
+          report={postingReport}
+          currentUserId={user.userId}
+          onClose={() => setPostingReport(null)}
+          onPosted={() => {
+            setPostingReport(null);
+            setPostSuccess(true);
+            setTimeout(() => setPostSuccess(false), 3000);
+          }}
+        />
+      )}
+
+      {postSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg text-sm font-medium">
+          ✓ Report posted to inbox successfully
+        </div>
       )}
     </div>
   );

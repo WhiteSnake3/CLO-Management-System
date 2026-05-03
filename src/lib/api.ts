@@ -181,6 +181,14 @@ export const reports = {
   }) => apiCall("/reports/save", { method: "POST", body: JSON.stringify(data) }),
 };
 
+// Inbox endpoints
+export const inbox = {
+  getAll: () => apiCall("/inbox"),
+  markRead: (id: string) => apiCall(`/inbox/${id}/read`, { method: "PUT" }),
+  post: (data: { reportId: string; recipientUserIds: string[] }) =>
+    apiCall("/inbox/post", { method: "POST", body: JSON.stringify(data) }),
+};
+
 // Syllabus import endpoint (multipart — cannot use apiCall)
 export const syllabus = {
   parse: (file: File): Promise<any> => {
