@@ -69,6 +69,7 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
     if (pathname === "/dashboard") return "dashboard";
     if (pathname.startsWith("/dashboard/courses")) return "courses";
     if (pathname.startsWith("/dashboard/assessments")) return "assessments";
+    if (pathname.startsWith("/dashboard/grades")) return "grades";
     if (pathname.startsWith("/dashboard/clo-analysis")) return "clo-analysis";
     if (pathname.startsWith("/dashboard/reports")) return "reports";
     if (pathname.startsWith("/dashboard/students")) return "students";
@@ -131,18 +132,30 @@ export default function DashboardNavTabs({ userRole }: DashboardNavTabsProps) {
           </span>
         </button>
 
-        <button
-          ref={(el) => { tabRefs.current["assessments"] = el; }}
-          onClick={() => router.push("/dashboard/assessments")}
-          onMouseEnter={() => handleTabHover("assessments")}
-          onMouseLeave={handleTabLeave}
-          className={`${activeKey === "assessments" ? activeClass : inactiveClass} flex items-center gap-1`}
-        >
-          Assessments{" "}
-          <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">
-            {assessmentCount}
-          </span>
-        </button>
+        {userRole === "student" ? (
+          <button
+            ref={(el) => { tabRefs.current["grades"] = el; }}
+            onClick={() => router.push("/dashboard/grades")}
+            onMouseEnter={() => handleTabHover("grades")}
+            onMouseLeave={handleTabLeave}
+            className={activeKey === "grades" ? activeClass : inactiveClass}
+          >
+            Grades
+          </button>
+        ) : (
+          <button
+            ref={(el) => { tabRefs.current["assessments"] = el; }}
+            onClick={() => router.push("/dashboard/assessments")}
+            onMouseEnter={() => handleTabHover("assessments")}
+            onMouseLeave={handleTabLeave}
+            className={`${activeKey === "assessments" ? activeClass : inactiveClass} flex items-center gap-1`}
+          >
+            Assessments{" "}
+            <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-xs font-semibold">
+              {assessmentCount}
+            </span>
+          </button>
+        )}
 
         {userRole === "instructor" && (
           <button

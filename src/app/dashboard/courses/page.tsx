@@ -213,7 +213,11 @@ export default function CoursesPage() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <button
-                          onClick={() => router.push(`/dashboard/assessments?courseId=${course.courseId}`)}
+                          onClick={() =>
+                            user?.role === "student"
+                              ? router.push(`/dashboard/grades?courseId=${course.courseId}`)
+                              : router.push(`/dashboard/assessments?courseId=${course.courseId}`)
+                          }
                           className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
                         >
                           View
